@@ -391,10 +391,7 @@
     <!-- FOOTER -->
     <footer class="p-2 sm:p-3 bg-black border-t border-zinc-800 flex justify-between items-center text-[11px] px-4 shrink-0">
 
-        <div class="text-zinc-400 truncate max-w-[50vw]"
-             id="activity-log-ticker">
-            Ready
-        </div>
+     
 
         <div class="flex space-x-2">
             <button onclick="toggleHistoryModal(true)"
@@ -1731,7 +1728,7 @@
         document.getElementById('scoreboard-modal').classList.add('hidden');
         document.getElementById('round-over-modal').classList.add('hidden');
         document.getElementById('lobby-error').classList.add('hidden');
-        logTicker('Ready');
+      
         refreshPublicRoomsList();
     }
 
@@ -5115,9 +5112,7 @@
 
         renderGameBoard();
 
-        logTicker(
-            "New round started!"
-        );
+       
 
         checkBotTurn();
     }
@@ -5737,9 +5732,7 @@
                 </div>
             </div>
 
-            <div id="database-history-status" class="px-4 pt-3 text-xs text-zinc-500 shrink-0">
-                Ready
-            </div>
+           
 
             <div id="database-history-list" class="p-4 space-y-3 overflow-y-auto flex-1"></div>
         </div>
