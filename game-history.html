@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Least Count - Game History</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-black text-white font-sans">
+    <main class="max-w-5xl mx-auto p-4 sm:p-6">
+        <div class="flex items-center justify-between gap-3 mb-5">
+            <div>
+                <h1 class="text-xl sm:text-2xl font-black text-emerald-300">Game History</h1>
+                <p class="text-xs text-zinc-500 mt-1">Saved game rounds, scores, players and final winners.</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="loadGameHistory()" class="px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-bold text-emerald-300 hover:bg-zinc-800">Refresh</button>
+                <a href="index.html" class="px-3 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-bold text-white hover:bg-zinc-800">Back to Game</a>
+            </div>
+        </div>
+
+        <div id="history-status" class="text-xs text-zinc-500 mb-3">Loading...</div>
+        <div id="history-list" class="space-y-3"></div>
+    </main>
+
+    <script>
+        const SUPABASE_BASE_URL = 'https://hmfeeaejffcbqyihshre.supabase.co';
+        const GAME_HISTORY_URL = `${SUPABASE_BASE_URL}/rest/v1/least_count_game_history`;
+        const SUPABASE_APIKEY = 'sb_publishable_8FANdKPFeAUoNKll-Gcldg_xtMTO5ND';
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        async function loadGameHistory() {
+            const status = document.getElementById('history-status');
+            const list = document.getElementById('history-list');
+            status.innerText = 'Loading...';
+            list.innerHTML = '';
+
+            try {
+                const response = await fetch(
+                    `${GAME_HISTORY_URL}?select=*&order=created_at.desc`,
+                    {
+                        method: 'GET',
+                        headers: {
+                            'apikey': SUPABASE_APIKEY,
+                            'Authorization': `Bearer ${SUPABASE_APIKEY}`,
+                            'Content-Type': 'application/json'
+                        }
+                    }
+                );
+
+                if (!response.ok) throw new Error('Failed to fetch game history');
+
+                const rows = await response.json();
+
+                if (!Array.isArray(rows) || rows.length === 0) {
+                    status.innerText = 'No saved games found.';
+                    return;
+                }
+
+                status.innerText = `${rows.length} saved game${rows.length === 1 ? '' : 's'}.`;
+
+                rows.forEach(row => {
+                    const card = document.createElement('article');
+                    card.className = 'bg-zinc-950 border border-zinc-800 rounded-2xl p-4 shadow-xl';
+                    card.innerHTML = `
+                        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 pb-3 mb-3">
+                            <div>
+                                <h2 class="text-sm sm:text-base font-black text-emerald-300">${escapeHtml(row.game_code)}</h2>
+                                <p class="text-xs text-zinc-400 mt-1">Host: <span class="text-white font-semibold">${escapeHtml(row.game_host)}</span></p>
+                            </div>
+                            <div class="text-right text-xs">
+                                <div class="text-zinc-500">Winner</div>
+                                <div class="text-amber-300 font-bold">${escapeHtml(row.game_winner || 'In Progress')}</div>
+                            </div>
+                        </div>
+                        <div class="grid sm:grid-cols-2 gap-3 mb-3">
+                            <div class="bg-zinc-900 rounded-xl p-3">
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Players</div>
+                                <div class="text-xs text-zinc-200">${escapeHtml(row.players_name)}</div>
+                            </div>
+                            <div class="bg-zinc-900 rounded-xl p-3">
+                                <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">Final / Current Points</div>
+                                <div class="text-xs text-zinc-200">${escapeHtml(row.game_points)}</div>
+                            </div>
+                        </div>
+                        <details>
+                            <summary class="cursor-pointer text-xs font-bold text-emerald-300">View complete round history</summary>
+                            <pre class="mt-3 whitespace-pre-wrap break-words bg-black border border-zinc-800 rounded-xl p-3 text-[11px] leading-relaxed text-zinc-300">${escapeHtml(row.game_history)}</pre>
+                        </details>
+                        <div class="text-[10px] text-zinc-600 mt-3">Saved: ${escapeHtml(row.created_at ? new Date(row.created_at).toLocaleString() : '')}</div>
+                    `;
+                    list.appendChild(card);
+                });
+            } catch (error) {
+                console.error(error);
+                status.innerText = 'Unable to load game history from Supabase.';
+            }
+        }
+
+        loadGameHistory();
+    </script>
+</body>
+</html>

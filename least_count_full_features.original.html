@@ -1,0 +1,5528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Least Count</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        body {
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
+        }
+
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body class="bg-black h-[100dvh] w-screen text-white font-sans flex flex-col justify-between">
+
+    <!-- PULL TO REFRESH INDICATOR -->
+    <div id="ptr-indicator"
+         class="absolute top-0 left-0 right-0 h-12 bg-zinc-900 border-b border-zinc-800 flex items-center justify-center text-xs text-emerald-400 font-semibold z-50 transform -translate-y-full transition-transform duration-200">
+        <span id="ptr-text">Pull down to refresh...</span>
+    </div>
+
+    <!-- TOP BAR / HEADER -->
+    <header class="p-2 sm:p-3 bg-black flex flex-row justify-between items-center border-b border-zinc-800 gap-2 shrink-0">
+        <div class="flex items-center space-x-2">
+            <span class="text-base sm:text-xl font-black tracking-wider text-emerald-400">LEAST COUNT</span>
+
+            <span id="room-badge"
+                  class="text-[10px] sm:text-xs bg-zinc-900 px-2 py-0.5 rounded text-emerald-300 hidden">
+                Room:
+                <span id="current-room-id" class="font-mono font-bold uppercase"></span>
+            </span>
+        </div>
+
+        <div class="flex items-center space-x-2">
+            <div id="game-status-banner"
+                 class="text-[11px] font-semibold bg-zinc-900 px-2.5 py-0.5 rounded-full border border-zinc-800 hidden">
+                Waiting...
+            </div>
+
+            <button onclick="confirmExitGame()"
+                    class="bg-rose-600/85 hover:bg-rose-600 text-white px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-rose-700/50">
+                Exit Game
+            </button>
+        </div>
+    </header>
+
+    <!-- STICKY PLAYER SCORES ROW CONTAINER -->
+    <div id="sticky-scores-wrapper"
+         class="hidden w-full bg-black border-b border-zinc-800 px-2 py-1.5 shrink-0 space-y-1">
+        <div id="top-scores-container"
+             class="flex flex-wrap justify-center items-center gap-1.5 max-w-5xl mx-auto"></div>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-grow flex flex-col items-center justify-center p-2 sm:p-4 max-w-5xl mx-auto w-full overflow-hidden">
+
+        <!-- LOBBY SCREEN -->
+        <div id="lobby-screen"
+             class="bg-black p-5 sm:p-6 rounded-2xl shadow-2xl max-w-md w-full border border-zinc-800 text-center space-y-3 overflow-y-auto max-h-[90vh]">
+
+            <h2 class="text-xl sm:text-2xl font-bold text-emerald-300">
+                Multiplayer & Solo Lobby
+            </h2>
+
+            <div class="space-y-2.5 text-left">
+                <div>
+                    <label class="block text-[11px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">
+                        Your Nickname
+                    </label>
+
+                    <input type="text"
+                           id="nickname-input"
+                           placeholder="Enter your name"
+                           maxlength="12"
+                           autocapitalize="words"
+                           autocorrect="off"
+                           spellcheck="false"
+                           autocomplete="off"
+                           class="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white placeholder-zinc-600 font-medium text-sm">
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">
+                            Max Players
+                        </label>
+
+                        <select id="max-players-select"
+                                class="w-full px-2 py-2 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white font-medium text-xs">
+                            <option value="2">2 Players</option>
+                            <option value="3">3 Players</option>
+                            <option value="4" selected>4 Players</option>
+                            <option value="5">5 Players</option>
+                            <option value="6">6 Players</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">
+                            Cards / Player
+                        </label>
+
+                        <select id="cards-count-select"
+                                class="w-full px-2 py-2 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white font-medium text-xs">
+                            <option value="5">5 Cards</option>
+                            <option value="7" selected>7 Cards</option>
+                            <option value="9">9 Cards</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">
+                            Eliminate Pts
+                        </label>
+
+                        <select id="target-points-select"
+                                class="w-full px-2 py-2 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white font-medium text-xs">
+                            <option value="50">50 Pts</option>
+                            <option value="75">75 Pts</option>
+                            <option value="100" selected>100 Pts</option>
+                            <option value="150">150 Pts</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-2.5 pt-1">
+
+                <button onclick="startSoloGame()"
+                        class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg transition transform active:scale-95 text-sm">
+                    🤖 Play vs Computer (Solo)
+                </button>
+
+                <button onclick="createRoom()"
+                        id="create-room-btn"
+                        class="w-full py-2 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl shadow-lg transition transform active:scale-95 text-sm">
+                    Create Room (Host)
+                </button>
+
+                <div class="relative flex py-0.5 items-center">
+                    <div class="flex-grow border-t border-zinc-800"></div>
+                    <span class="flex-shrink mx-3 text-zinc-500 text-[11px] uppercase">
+                        or join existing
+                    </span>
+                    <div class="flex-grow border-t border-zinc-800"></div>
+                </div>
+
+                <div class="flex space-x-2">
+                    <input type="text"
+                           id="join-room-input"
+                           placeholder="Room Code"
+                           autocapitalize="characters"
+                           autocorrect="off"
+                           spellcheck="false"
+                           autocomplete="off"
+                           class="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white placeholder-zinc-600 font-medium uppercase text-sm">
+
+                    <button onclick="joinRoom()"
+                            id="join-room-btn"
+                            class="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl shadow-lg transition transform active:scale-95 text-sm whitespace-nowrap">
+                        Join Code
+                    </button>
+                </div>
+            </div>
+
+            <!-- PUBLIC ROOMS DIRECTORY LIST -->
+            <div class="pt-2 text-left space-y-1.5 border-t border-zinc-900">
+                <div class="flex justify-between items-center">
+                    <span class="text-[11px] uppercase tracking-wider text-zinc-400 font-semibold">
+                        Available Public Rooms
+                    </span>
+
+                    <button onclick="refreshPublicRoomsList()"
+                            class="text-[10px] text-emerald-400 hover:underline">
+                        Refresh
+                    </button>
+                </div>
+
+                <div id="public-rooms-container"
+                     class="space-y-1.5 max-h-28 overflow-y-auto">
+                    <p class="text-[11px] text-zinc-500 italic text-center py-2">
+                        Searching public registry...
+                    </p>
+                </div>
+            </div>
+
+            <p id="lobby-error"
+               class="text-rose-400 text-xs font-medium hidden"></p>
+        </div>
+
+        <!-- WAITING ROOM SCREEN -->
+        <div id="waiting-screen"
+             class="hidden bg-black p-6 sm:p-8 rounded-2xl shadow-2xl max-w-md w-full border border-zinc-800 text-center space-y-4">
+
+            <h2 class="text-xl sm:text-2xl font-bold text-emerald-300">
+                Waiting for Players
+            </h2>
+
+            <div class="bg-zinc-900 p-3 rounded-xl border border-zinc-800">
+                <p class="text-[11px] text-zinc-400 uppercase tracking-wider mb-1">
+                    Room Code
+                </p>
+
+                <p id="display-room-code"
+                   class="text-2xl sm:text-3xl font-mono font-black text-amber-400 tracking-widest select-all"></p>
+            </div>
+
+            <div>
+                <h3 class="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 mb-2">
+                    Connected
+                    (<span id="connected-count">1</span>/<span id="max-count">4</span>)
+                    • Cards:
+                    <span id="display-cards-count">7</span>
+                    • Target:
+                    <span id="display-target-pts">100</span> pts
+                </h3>
+
+                <ul id="player-list-ul"
+                    class="space-y-1.5 max-h-36 overflow-y-auto"></ul>
+            </div>
+
+            <div id="host-controls" class="hidden pt-2">
+                <button onclick="startHostGame()"
+                        class="w-full py-2.5 bg-amber-400 hover:bg-amber-300 text-black font-bold rounded-xl shadow-lg transition text-sm">
+                    Start Game Now
+                </button>
+            </div>
+
+            <p id="waiting-msg"
+               class="text-emerald-300 text-xs animate-pulse">
+                Waiting for host to start...
+            </p>
+        </div>
+
+        <!-- GAME BOARD SCREEN -->
+        <div id="game-board-screen"
+             class="hidden w-full h-full flex flex-col justify-between space-y-2 overflow-hidden">
+
+            <!-- OPPONENTS HUD BAR -->
+            <div id="opponents-hud"
+                 class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 shrink-0"></div>
+
+            <!-- CHAT MESSAGES DISPLAY BAR -->
+            <div id="chat-messages-banner"
+                 class="w-full bg-zinc-900/90 border border-zinc-800 px-3 py-1.5 rounded-xl text-xs hidden shrink-0 flex-col space-y-1">
+
+                <div class="font-bold text-amber-400 whitespace-nowrap">
+                    💬 Room Chat
+                    <span class="text-[10px] text-zinc-500 font-normal">
+                        • Latest 3 messages
+                    </span>
+                </div>
+
+                <div id="chat-history-list"
+                     class="flex flex-col-reverse gap-1 max-h-16 overflow-y-auto"></div>
+            </div>
+
+            <!-- CENTER PLAY AREA -->
+            <div class="bg-black border border-zinc-800 p-3 sm:p-4 rounded-xl flex flex-row justify-around items-center gap-2 relative shadow-inner shrink-0">
+
+                <!-- Stock Deck -->
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] text-zinc-400 uppercase tracking-wider mb-1 font-semibold">
+                        Stock (<span id="deck-count">0</span>)
+                    </span>
+
+                    <div onclick="drawFromDeck()"
+                         id="stock-deck"
+                         class="w-14 h-20 sm:w-18 sm:h-26 bg-zinc-900 border-2 border-zinc-700 rounded-lg shadow-lg flex items-center justify-center cursor-pointer hover:scale-105 transition transform relative group">
+
+                        <div class="absolute inset-1.5 border border-zinc-700 rounded flex items-center justify-center">
+                            <span class="text-zinc-400 font-bold text-[10px] uppercase tracking-widest group-hover:text-white">
+                                Draw
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instruction Box & Game Room Chat Option -->
+                <div class="text-center max-w-[200px] sm:max-w-xs px-2 flex flex-col space-y-2">
+
+                    <div id="turn-indicator-box"
+                         class="bg-zinc-900 border border-zinc-800 px-3 py-2 rounded-xl shadow">
+
+                        <p id="turn-announcement"
+                           class="text-xs sm:text-sm font-bold text-amber-300 truncate">
+                            Turn: Name
+                        </p>
+
+                        <p id="action-instruction"
+                           class="text-[10px] sm:text-xs text-zinc-400 mt-0.5">
+                            Drop card
+                        </p>
+                    </div>
+
+                    <!-- Room Chat Input Box -->
+                    <div class="flex space-x-1">
+                        <input type="text"
+                               id="room-chat-input"
+                               placeholder="Type chat..."
+                               maxlength="40"
+                               class="w-full px-2 py-1 rounded bg-zinc-900 border border-zinc-800 text-white text-[10px] focus:outline-none focus:border-emerald-500 placeholder-zinc-500">
+
+                        <button onclick="sendRoomChatMessage()"
+                                class="px-2 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded text-[10px] whitespace-nowrap">
+                            Send
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Discard Board Pile -->
+                <div class="flex flex-col items-center">
+                    <span class="text-[10px] text-zinc-400 uppercase tracking-wider mb-1 font-semibold">
+                        Discard
+                    </span>
+
+                    <div id="board-card-container"
+                         class="w-14 h-20 sm:w-18 sm:h-26 bg-white border-2 border-slate-300 rounded-lg shadow-lg flex flex-col justify-between p-1.5 text-slate-900 font-bold transition">
+
+                        <div class="text-[10px]" id="board-val-tl">7</div>
+                        <div class="text-base sm:text-xl self-center" id="board-suit-mid">♠</div>
+                        <div class="text-[10px] self-end rotate-180" id="board-val-br">7</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PLAYER'S HAND CONTAINER -->
+            <div class="bg-black border border-zinc-800 p-2 sm:p-3 rounded-xl flex flex-col space-y-2 shrink-0">
+
+                <div class="flex justify-between items-center px-1">
+
+                    <div class="flex items-center space-x-2">
+                        <span class="font-bold text-xs sm:text-sm text-zinc-200 truncate max-w-[120px]"
+                              id="my-display-name">
+                            You
+                        </span>
+
+                        <span class="text-[10px] sm:text-xs bg-zinc-900 text-zinc-300 px-2 py-0.5 rounded-full border border-zinc-800">
+                            Sum:
+                            <strong id="my-hand-sum" class="text-white">0</strong>
+                        </span>
+                    </div>
+
+                    <div class="flex space-x-2">
+                        <button id="call-show-btn"
+                                onclick="callShow()"
+                                disabled
+                                class="px-3 py-1 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[11px] font-bold rounded-lg shadow transition">
+                            Call Show! (≤5)
+                        </button>
+                    </div>
+                </div>
+
+                <div id="my-hand-cards"
+                     class="flex flex-nowrap overflow-x-auto gap-1.5 sm:gap-3 justify-start sm:justify-center min-h-[95px] sm:min-h-[110px] p-1 items-center"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="p-2 sm:p-3 bg-black border-t border-zinc-800 flex justify-between items-center text-[11px] px-4 shrink-0">
+
+        <div class="text-zinc-400 truncate max-w-[50vw]"
+             id="activity-log-ticker">
+            Ready
+        </div>
+
+        <div class="flex space-x-2">
+            <button onclick="toggleHistoryModal(true)"
+                    class="bg-zinc-900 hover:bg-zinc-800 text-zinc-200 px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-zinc-800">
+                History
+            </button>
+
+            <button onclick="toggleInstructionsModal(true)"
+                    class="bg-zinc-900 hover:bg-zinc-800 text-emerald-300 px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-zinc-800">
+                Game Instructions
+            </button>
+
+            <button onclick="toggleScoreboardModal(true)"
+                    class="bg-zinc-900 hover:bg-zinc-800 text-zinc-200 px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-zinc-800">
+                Scores
+            </button>
+        </div>
+    </footer>
+
+    <!-- ========================================================= -->
+    <!-- NEW: REJOIN PERMISSION MODAL                              -->
+    <!-- ========================================================= -->
+    <div id="rejoin-request-modal"
+         class="fixed inset-0 bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-4 z-[80]">
+
+        <div class="bg-black border border-amber-500/40 w-full max-w-sm rounded-2xl p-5 shadow-2xl space-y-4">
+
+            <div class="text-center">
+                <div class="text-3xl mb-2">🔄</div>
+
+                <h3 class="text-lg font-black text-amber-400">
+                    Rejoin Request
+                </h3>
+
+                <p id="rejoin-request-text"
+                   class="text-xs text-zinc-300 mt-2">
+                    A player wants to rejoin the game.
+                </p>
+            </div>
+
+            <div class="space-y-2">
+
+                <button id="allow-view-rejoin-btn"
+                        class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition text-sm">
+                    👁 Allow View Only
+                </button>
+
+                <button id="allow-play-rejoin-btn"
+                        class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl transition text-sm">
+                    ▶ Allow Play
+                </button>
+
+                <button id="deny-rejoin-btn"
+                        class="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition text-sm">
+                    ✕ Deny
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HISTORY MODAL -->
+    <div id="history-modal"
+         class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+
+        <div class="bg-black border border-zinc-800 w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-3 max-h-[80vh] overflow-y-auto">
+
+            <div class="flex justify-between items-center border-b border-zinc-900 pb-2">
+                <h3 class="text-base font-bold text-emerald-300">
+                    Game Round History
+                </h3>
+
+                <button onclick="toggleHistoryModal(false)"
+                        class="text-zinc-400 hover:text-white font-bold text-lg px-2">
+                    &times;
+                </button>
+            </div>
+
+            <div id="history-container"
+                 class="space-y-3 text-xs sm:text-sm">
+                <p class="text-zinc-500 italic text-center py-4">
+                    No completed rounds yet.
+                </p>
+            </div>
+
+            <div class="pt-1 flex justify-end">
+                <button onclick="toggleHistoryModal(false)"
+                        class="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 font-semibold text-white rounded-xl text-xs">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- GAME INSTRUCTIONS MODAL -->
+    <div id="instructions-modal"
+         class="fixed inset-0 bg-black/85 backdrop-blur-sm hidden flex items-center justify-center p-4 z-[70]">
+        <div class="bg-black border border-emerald-500/30 w-full max-w-lg rounded-2xl p-5 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-2">
+                <h3 class="text-base sm:text-lg font-black text-emerald-300">How to Play Least Count</h3>
+                <button onclick="toggleInstructionsModal(false)" aria-label="Close instructions"
+                        class="text-zinc-400 hover:text-white font-bold text-xl px-2">&times;</button>
+            </div>
+            <div class="space-y-3 text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                <section class="space-y-1">
+                    <h4 class="font-bold text-white">1. Goal</h4>
+                    <p>Keep the total points in your hand as low as possible. Players collect points when a round ends; reaching the game's elimination limit removes a player from later rounds. The last eligible player remaining wins.</p>
+                </section>
+                <section class="space-y-1">
+                    <h4 class="font-bold text-white">2. Starting a round</h4>
+                    <p>Each active player receives the configured number of cards. A card is placed face-up to begin the discard pile, and the remaining cards form the stock deck. Only active, connected players who are allowed to play take turns.</p>
+                </section>
+                <section class="space-y-1">
+                    <h4 class="font-bold text-white">3. Taking your turn</h4>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>Choose a card from your hand to discard. All cards in your hand with the same rank/value as the selected card are discarded together.</li>
+                        <li>If that rank/value matches the top card already on the discard pile, your turn ends immediately and the next player goes.</li>
+                        <li>Otherwise, draw one card from the stock deck. Your turn then ends and play moves to the next eligible player.</li>
+                        <li>If the stock deck runs out while cards remain in the discard pile, the discard pile is recycled into the stock while its top card stays face-up.</li>
+                    </ul>
+                </section>
+                <section class="space-y-1">
+                    <h4 class="font-bold text-white">4. Round-robin first player</h4>
+                    <p>The opening turn rotates by seat order from round to round: the host starts Round 1, the next eligible seat starts Round 2, then the following eligible seat starts Round 3, and so on. If the scheduled player is eliminated, disconnected, or view-only, the next eligible player is selected.</p>
+                    <p class="text-emerald-300">Example with four seats: Round 1 — Player 1; Round 2 — Player 2; Round 3 — Player 3; Round 4 — Player 4; Round 5 — back to Player 1 (skipping any ineligible seat).</p>
+                </section>
+                <section class="space-y-1">
+                    <h4 class="font-bold text-white">5. Calling “Show”</h4>
+                    <p>When your hand total is 5 points or less, you can use <strong class="text-white">Call Show! (≤5)</strong> to end the round. The game compares the hand totals of eligible players.</p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong class="text-white">Failed Show:</strong> if any other eligible player has a lower total than the caller, the caller receives a 25-point penalty.</li>
+                        <li><strong class="text-white">Matched Show:</strong> if another eligible player has the same total as the caller and nobody has a lower total, the tied players avoid points for that round; other eligible players add their hand totals.</li>
+                        <li><strong class="text-white">Good Show:</strong> if nobody has a lower or equal total, the caller avoids points and each other eligible player adds their hand total.</li>
+                    </ul>
+                </section>
+                <section class="space-y-1">
+                    <h4 class="font-bold text-white">6. Points and elimination</h4>
+                    <p>For example, if a player has cards worth 1, 2, and 2 points, their hand total is 5. When a round result says that player adds their hand total, 5 points are added to their running score. A player is marked eliminated when their score reaches the configured elimination threshold. Eliminated players do not take turns in following rounds.</p>
+                </section>
+                <section class="space-y-1">
+                    <h4 class="font-bold text-white">7. Multiplayer and rejoining</h4>
+                    <p>The host controls starting rounds. A view-only spectator can watch but cannot play cards or call Show. If you leave, use the room's rejoin process to request access again; the host can allow viewing, allow playing, or deny the request.</p>
+                </section>
+                <p class="text-[11px] text-zinc-500 border-t border-zinc-800 pt-2">Card point values and round settings follow the values configured in this game. Check the Scores and History panels to review totals and completed rounds.</p>
+            </div>
+            <div class="flex justify-end pt-1">
+                <button onclick="toggleInstructionsModal(false)"
+                        class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 font-bold text-black rounded-xl text-xs">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCOREBOARD MODAL -->
+    <div id="scoreboard-modal"
+         class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+
+        <div class="bg-black border border-zinc-800 w-full max-w-md rounded-2xl p-5 shadow-2xl space-y-3 max-h-[80vh] overflow-y-auto">
+
+            <div class="flex justify-between items-center border-b border-zinc-900 pb-2">
+
+                <h3 id="modal-standings-title"
+                    class="text-base font-bold text-emerald-300">
+                    Standings
+                </h3>
+
+                <button onclick="toggleScoreboardModal(false)"
+                        class="text-zinc-400 hover:text-white font-bold text-lg px-2">
+                    &times;
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs sm:text-sm">
+
+                    <thead>
+                        <tr class="text-zinc-400 border-b border-zinc-900">
+                            <th class="pb-1.5">Player</th>
+                            <th class="pb-1.5 text-right">Points</th>
+                            <th class="pb-1.5 text-right">Status</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="scoreboard-table-body"
+                           class="divide-y divide-zinc-900"></tbody>
+                </table>
+            </div>
+
+            <div class="pt-1 flex justify-end">
+                <button onclick="toggleScoreboardModal(false)"
+                        class="px-3.5 py-1.5 bg-zinc-800 hover:bg-zinc-700 font-semibold text-white rounded-xl text-xs">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROUND OVER MODAL -->
+    <div id="round-over-modal"
+         class="fixed inset-0 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 z-50">
+
+        <div class="bg-black border border-zinc-800 w-full max-w-lg rounded-2xl p-5 shadow-2xl space-y-4 relative max-h-[85vh] overflow-y-auto">
+
+            <button onclick="closeRoundOverModal()"
+                    class="absolute top-3 right-3 text-zinc-400 hover:text-white font-bold text-xl px-2 py-0.5">
+                &times;
+            </button>
+
+            <h2 id="round-over-title"
+                class="text-xl sm:text-2xl font-black text-amber-400 text-center">
+                SHOW CALLED!
+            </h2>
+
+            <div id="round-over-content"
+                 class="text-xs sm:text-sm text-zinc-300 space-y-2 max-h-48 overflow-y-auto p-2 bg-zinc-950 rounded-xl border border-zinc-900"></div>
+
+            <div id="host-next-round-container"
+                 class="hidden pt-1">
+
+                <button onclick="startNextRound()"
+                        class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl shadow-lg transition text-sm">
+                    Start Next Round
+                </button>
+            </div>
+
+            <p id="waiting-next-round-msg"
+               class="text-xs text-zinc-400 text-center animate-pulse">
+                Waiting for host to start next round...
+            </p>
+        </div>
+    </div>
+
+<script>
+    // ============================================================
+    // SUPABASE CLIENT & REALTIME CHANNEL INITIALIZATION
+    // ============================================================
+
+    const SUPABASE_BASE_URL = 'https://hmfeeaejffcbqyihshre.supabase.co';
+    const SUPABASE_URL = `${SUPABASE_BASE_URL}/rest/v1/least-count`;
+    const SUPABASE_APIKEY = 'sb_publishable_8FANdKPFeAUoNKll-Gcldg_xtMTO5ND';
+    const nicknameInput = document.getElementById('nickname-input');
+    try { nicknameInput.value = localStorage.getItem('leastCountNickname') || ''; } catch (e) {}
+    nicknameInput.addEventListener('input', () => { try { localStorage.setItem('leastCountNickname', nicknameInput.value); } catch (e) {} });
+
+    const supabaseClient = supabase.createClient(
+        SUPABASE_BASE_URL,
+        SUPABASE_APIKEY
+    );
+
+    let roomChannel = null;
+
+    let isHost = false;
+    let isSoloMode = false;
+    let myId = '';
+    let myName = '';
+    let myClientToken = '';
+
+    try {
+        myClientToken =
+            sessionStorage.getItem('leastCountClientToken') || '';
+
+        if (!myClientToken) {
+            myClientToken =
+                'client-' +
+                Math.random().toString(36).slice(2) +
+                Date.now().toString(36);
+
+            sessionStorage.setItem(
+                'leastCountClientToken',
+                myClientToken
+            );
+        }
+    } catch (e) {
+        myClientToken =
+            'client-' +
+            Math.random().toString(36).slice(2) +
+            Date.now().toString(36);
+    }
+
+    let maxPlayersLimit = 4;
+    let cardsPerPlayer = 7;
+    let targetEliminationPoints = 100;
+    let roomCode = '';
+
+    let players = [];
+    let myIndex = 0;
+    let gameHistory = [];
+    let roundCounter = 0;
+
+    let deck = [];
+    let discardPile = [];
+    let currentTurnIndex = 0;
+    let roundActive = false;
+    let turnPhase = 'drop';
+
+    const suits = ['♠', '♣', '♥', '♦'];
+    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+
+    // ============================================================
+    // NEW: REJOIN REQUEST STATE
+    // ============================================================
+
+    let pendingRejoinRequest = null;
+
+    /*
+     * Important:
+     *
+     * connected = true
+     *     Player is eligible to participate.
+     *
+     * connected = false
+     *     Player is not eligible for turns.
+     *
+     * viewOnly = true
+     *     Player is allowed to see the game but cannot play.
+     *
+     * rejoinPending = true
+     *     Player has requested permission and is waiting for host.
+     */
+
+    function getPlayerToken(player) {
+        if (!player) return '';
+        return player.clientToken || player.id || '';
+    }
+
+    function isMePlayer(player) {
+        if (!player) return false;
+
+        return (
+            player.clientToken === myClientToken ||
+            player.id === myId
+        );
+    }
+
+    function isPlayerAllowedToPlay(player) {
+        return !!(
+            player &&
+            player.connected !== false &&
+            player.viewOnly !== true &&
+            player.rejoinPending !== true &&
+            !player.eliminated
+        );
+    }
+
+    // ============================================================
+    // REALTIME MESSAGING WRAPPER
+    // ============================================================
+
+    function sendRealtimeMessage(payload) {
+        if (roomChannel) {
+            return roomChannel.send({
+                type: 'broadcast',
+                event: 'game_event',
+                payload: payload
+            });
+        }
+    }
+
+    function initRealtimeChannel(code) {
+        if (roomChannel) {
+            supabaseClient.removeChannel(roomChannel);
+        }
+
+        roomChannel = supabaseClient.channel(`room_${code}`, {
+            config: {
+                broadcast: {
+                    self: true
+                }
+            }
+        });
+
+        roomChannel
+            .on(
+                'broadcast',
+                { event: 'game_event' },
+                ({ payload }) => {
+                    handleIncomingNetworkData(payload);
+                }
+            )
+            .subscribe((status) => {
+
+                if (status === 'SUBSCRIBED') {
+
+                    if (!isHost && !isSoloMode) {
+
+                        /*
+                         * Existing player:
+                         * DO NOT automatically reconnect.
+                         *
+                         * The host must approve the rejoin.
+                         */
+                        sendRealtimeMessage({
+                            type: 'JOIN_REQUEST',
+                            name: myName,
+                            clientToken: myClientToken,
+                            senderId: myClientToken,
+                            rejoinRequest: true
+                        });
+                    }
+                }
+            });
+    }
+
+    // ============================================================
+    // PULL TO REFRESH
+    // ============================================================
+
+    let touchStartY = 0;
+    let isPulling = false;
+
+    const ptrIndicator =
+        document.getElementById('ptr-indicator');
+
+    const ptrText =
+        document.getElementById('ptr-text');
+
+    window.addEventListener(
+        'touchstart',
+        (e) => {
+
+            let lobbyScreen =
+                document.getElementById('lobby-screen');
+
+            if (
+                lobbyScreen &&
+                !lobbyScreen.classList.contains('hidden') &&
+                lobbyScreen.scrollTop <= 5
+            ) {
+                touchStartY = e.touches[0].clientY;
+                isPulling = true;
+            }
+        },
+        { passive: true }
+    );
+
+    window.addEventListener(
+        'touchmove',
+        (e) => {
+
+            if (!isPulling) return;
+
+            let touchY = e.touches[0].clientY;
+            let diff = touchY - touchStartY;
+
+            if (diff > 0 && diff < 160) {
+
+                ptrIndicator.style.transform =
+                    `translateY(${diff - 48}px)`;
+
+                if (diff > 75) {
+                    ptrText.innerText =
+                        "Release to refresh!";
+                } else {
+                    ptrText.innerText =
+                        "Pull down to refresh...";
+                }
+            }
+        },
+        { passive: true }
+    );
+
+    window.addEventListener(
+        'touchend',
+        (e) => {
+
+            if (!isPulling) return;
+
+            isPulling = false;
+
+            let touchY =
+                e.changedTouches[0].clientY;
+
+            let diff =
+                touchY - touchStartY;
+
+            ptrIndicator.style.transform =
+                'translateY(-100%)';
+
+            if (diff > 75) {
+
+                ptrText.innerText =
+                    "Refreshing...";
+
+                setTimeout(
+                    () => location.reload(),
+                    200
+                );
+            }
+        }
+    );
+
+    const cardValueWeight = {
+        'A': 1,
+        '2': 2,
+        '3': 3,
+        '4': 4,
+        '5': 5,
+        '6': 6,
+        '7': 7,
+        '8': 8,
+        '9': 9,
+        '10': 10,
+        'J': 11,
+        'Q': 12,
+        'K': 13
+    };
+
+    function sortHandCards(hand) {
+
+        const counts = {};
+
+        hand.forEach(c => {
+            counts[c.val] =
+                (counts[c.val] || 0) + 1;
+        });
+
+        return hand.sort((a, b) => {
+
+            let countDiff =
+                (counts[b.val] || 0) -
+                (counts[a.val] || 0);
+
+            if (countDiff !== 0)
+                return countDiff;
+
+            let valDiff =
+                (cardValueWeight[a.val] || 0) -
+                (cardValueWeight[b.val] || 0);
+
+            if (valDiff !== 0)
+                return valDiff;
+
+            return a.suit.localeCompare(b.suit);
+        });
+    }
+
+    function logTicker(msg) {
+        document.getElementById(
+            'activity-log-ticker'
+        ).innerText = msg;
+    }
+
+    // ============================================================
+    // PUBLIC ROOMS DIRECTORY
+    // ============================================================
+
+    async function refreshPublicRoomsList() {
+
+        const container =
+            document.getElementById(
+                'public-rooms-container'
+            );
+
+        if (!container) return;
+
+        try {
+
+            const response =
+                await fetch(SUPABASE_URL, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': SUPABASE_APIKEY,
+                        'Authorization':
+                            `Bearer ${SUPABASE_APIKEY}`,
+                        'Content-Type':
+                            'application/json'
+                    }
+                });
+
+            if (!response.ok)
+                throw new Error(
+                    'Failed to fetch rooms'
+                );
+
+            let rooms =
+                await response.json();
+
+            let now =
+                new Date().getTime();
+
+            let publicRooms =
+                (Array.isArray(rooms)
+                    ? rooms
+                    : []
+                ).filter(r => {
+
+                    if (r.status !== 'waiting')
+                        return false;
+
+                    if (
+                        r.game_started === 'yes' ||
+                        r.game_started === 'true'
+                    )
+                        return false;
+
+                    if (r.created_at) {
+
+                        let createdTime =
+                            new Date(
+                                r.created_at
+                            ).getTime();
+
+                        if (
+                            !isNaN(createdTime) &&
+                            now - createdTime >
+                            5 * 60 * 1000
+                        ) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                });
+
+            if (publicRooms.length === 0) {
+
+                container.innerHTML =
+                    `<p class="text-[11px] text-zinc-500 italic text-center py-2">
+                        No active waiting rooms found. Create one above!
+                    </p>`;
+
+                return;
+            }
+
+            container.innerHTML = '';
+
+            publicRooms.forEach(room => {
+
+                let div =
+                    document.createElement('div');
+
+                div.className =
+                    'bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 p-2 rounded-xl flex justify-between items-center transition cursor-pointer';
+
+                div.onclick = () => {
+
+                    document.getElementById(
+                        'join-room-input'
+                    ).value = room.join_code;
+
+                    joinRoom();
+                };
+
+                div.innerHTML =
+                    `<div>
+                        <div class="text-xs font-bold text-emerald-300">
+                            Room: ${room.join_code}
+                            <span class="text-[10px] text-zinc-400 font-normal">
+                                (${room.host_name}'s Room)
+                            </span>
+                        </div>
+                        <div class="text-[10px] text-zinc-400">
+                            Max: ${room.max_players} players • Cards: ${room.cards}
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-[10px] rounded-lg">
+                        Join
+                    </span>`;
+
+                container.appendChild(div);
+            });
+
+        } catch (e) {
+
+            container.innerHTML =
+                `<p class="text-[11px] text-zinc-500 italic text-center py-2">
+                    Unable to load rooms from database.
+                </p>`;
+        }
+    }
+
+    async function registerPublicRoom(
+        statusValue = 'waiting',
+        startedValue = 'no'
+    ) {
+
+        if (
+            !isHost ||
+            isSoloMode ||
+            !roomCode
+        )
+            return;
+
+        try {
+
+            const roomPayload = {
+                id:
+                    'g_' +
+                    Math.random()
+                        .toString(36)
+                        .substring(2, 7),
+
+                host_name:
+                    myName || 'Host',
+
+                max_players:
+                    String(maxPlayersLimit),
+
+                cards:
+                    String(cardsPerPlayer),
+
+                eliminate_points:
+                    String(targetEliminationPoints),
+
+                join_code:
+                    roomCode,
+
+                status:
+                    statusValue,
+
+                game_started:
+                    startedValue,
+
+                created_at:
+                    new Date().toISOString()
+            };
+
+            await fetch(
+                SUPABASE_URL,
+                {
+                    method: 'POST',
+                    headers: {
+                        'apikey':
+                            SUPABASE_APIKEY,
+
+                        'Authorization':
+                            `Bearer ${SUPABASE_APIKEY}`,
+
+                        'Content-Type':
+                            'application/json',
+
+                        'Prefer':
+                            'return=representation'
+                    },
+
+                    body:
+                        JSON.stringify(
+                            roomPayload
+                        )
+                }
+            );
+
+        } catch (e) {}
+    }
+
+    async function updateRoomStartedStatus(
+        startedValue = 'yes'
+    ) {
+
+        if (
+            !isHost ||
+            isSoloMode ||
+            !roomCode
+        )
+            return;
+
+        try {
+
+            await fetch(
+                `${SUPABASE_URL}?join_code=eq.${roomCode}`,
+                {
+                    method: 'PATCH',
+
+                    headers: {
+                        'apikey':
+                            SUPABASE_APIKEY,
+
+                        'Authorization':
+                            `Bearer ${SUPABASE_APIKEY}`,
+
+                        'Content-Type':
+                            'application/json',
+
+                        'Prefer':
+                            'return=representation'
+                    },
+
+                    body:
+                        JSON.stringify({
+                            game_started:
+                                startedValue,
+
+                            status:
+                                'active'
+                        })
+                }
+            );
+
+        } catch (e) {}
+    }
+
+    window.addEventListener(
+        'load',
+        () => {
+            refreshPublicRoomsList();
+        }
+    );
+
+    // ============================================================
+    // NEW: REJOIN REQUEST NOTIFICATION
+    // ============================================================
+
+    function showRejoinRequestNotification(
+        player
+    ) {
+
+        if (!isHost || !player)
+            return;
+
+        pendingRejoinRequest = {
+            clientToken:
+                player.clientToken || player.id,
+
+            playerId:
+                player.id,
+
+            playerName:
+                player.name || 'Player'
+        };
+
+        const modal =
+            document.getElementById(
+                'rejoin-request-modal'
+            );
+
+        const textEl =
+            document.getElementById(
+                'rejoin-request-text'
+            );
+
+        if (textEl) {
+
+            textEl.innerText =
+                `${player.name || 'Player'} has returned to the room and is requesting permission to rejoin.`;
+        }
+
+        modal.classList.remove('hidden');
+
+        /*
+         * Make sure only one request is shown at a time.
+         */
+        document.getElementById(
+            'allow-view-rejoin-btn'
+        ).onclick =
+            () => approveRejoin('view');
+
+        document.getElementById(
+            'allow-play-rejoin-btn'
+        ).onclick =
+            () => approveRejoin('play');
+
+        document.getElementById(
+            'deny-rejoin-btn'
+        ).onclick =
+            () => approveRejoin('deny');
+    }
+
+    function closeRejoinRequestNotification() {
+
+        const modal =
+            document.getElementById(
+                'rejoin-request-modal'
+            );
+
+        if (modal)
+            modal.classList.add('hidden');
+
+        pendingRejoinRequest = null;
+    }
+
+    function approveRejoin(permission) {
+
+        if (
+            !isHost ||
+            !pendingRejoinRequest
+        )
+            return;
+
+        const requestedToken =
+            pendingRejoinRequest.clientToken;
+
+        const player =
+            players.find(p =>
+                (p.clientToken || p.id) ===
+                requestedToken
+            );
+
+        if (!player) {
+
+            closeRejoinRequestNotification();
+
+            logTicker(
+                "Rejoin request player is no longer available."
+            );
+
+            return;
+        }
+
+        /*
+         * DENY
+         */
+        if (permission === 'deny') {
+
+            player.connected = false;
+            player.viewOnly = false;
+            player.rejoinPending = false;
+
+            sendRealtimeMessage({
+                type: 'REJOIN_PERMISSION_RESPONSE',
+
+                targetToken:
+                    requestedToken,
+
+                permission:
+                    'deny'
+            });
+
+            closeRejoinRequestNotification();
+
+            broadcastPlayerList();
+
+            if (roundActive)
+                broadcastGameState(
+                    `${player.name} was not allowed to rejoin.`
+                );
+
+            renderGameBoard();
+
+            logTicker(
+                `Denied rejoin request from ${player.name}.`
+            );
+
+            return;
+        }
+
+        /*
+         * VIEW ONLY
+         */
+        if (permission === 'view') {
+
+            player.connected = false;
+            player.viewOnly = true;
+            player.rejoinPending = false;
+
+            sendRealtimeMessage({
+                type:
+                    'REJOIN_PERMISSION_RESPONSE',
+
+                targetToken:
+                    requestedToken,
+
+                permission:
+                    'view',
+
+                players:
+                    players,
+
+                deck:
+                    deck,
+
+                discardPile:
+                    discardPile,
+
+                currentTurnIndex:
+                    currentTurnIndex,
+
+                turnPhase:
+                    turnPhase,
+
+                roundActive:
+                    roundActive,
+
+                gameHistory:
+                    gameHistory
+            });
+
+            closeRejoinRequestNotification();
+
+            broadcastPlayerList();
+
+            renderGameBoard();
+
+            logTicker(
+                `${player.name} allowed to view the game only.`
+            );
+
+            return;
+        }
+
+        /*
+         * ALLOW PLAY
+         */
+        if (permission === 'play') {
+
+            player.connected = true;
+            player.viewOnly = false;
+            player.rejoinPending = false;
+
+            sendRealtimeMessage({
+                type:
+                    'REJOIN_PERMISSION_RESPONSE',
+
+                targetToken:
+                    requestedToken,
+
+                permission:
+                    'play',
+
+                players:
+                    players,
+
+                deck:
+                    deck,
+
+                discardPile:
+                    discardPile,
+
+                currentTurnIndex:
+                    currentTurnIndex,
+
+                turnPhase:
+                    turnPhase,
+
+                roundActive:
+                    roundActive,
+
+                gameHistory:
+                    gameHistory
+            });
+
+            closeRejoinRequestNotification();
+
+            broadcastPlayerList();
+
+            if (roundActive) {
+
+                broadcastGameState(
+                    `${player.name} rejoined and was allowed to play.`
+                );
+
+            } else {
+
+                logTicker(
+                    `${player.name} was allowed to rejoin.`
+                );
+            }
+
+            renderGameBoard();
+        }
+    }
+
+    // ============================================================
+    // EXIT GAME
+    // ============================================================
+
+    async function confirmExitGame() {
+
+        if (!confirm(
+            "Are you sure you want to exit?"
+        ))
+            return;
+
+        if (
+            !isSoloMode &&
+            roomCode &&
+            roomChannel
+        ) {
+
+            try {
+
+                if (isHost) {
+
+                    const leaving =
+                        players.find(
+                            p =>
+                                p.clientToken ===
+                                myClientToken ||
+                                p.id === myId
+                        );
+
+                    if (leaving) {
+
+                        leaving.connected = false;
+                        leaving.viewOnly = false;
+                        leaving.rejoinPending = false;
+                    }
+
+                    if (
+                        roundActive &&
+                        players[currentTurnIndex] &&
+                        (
+                            players[currentTurnIndex].clientToken === myClientToken ||
+                            players[currentTurnIndex].id === myId
+                        )
+                    ) {
+
+                        advanceTurn();
+                    }
+
+                    const successor =
+                        players.find(
+                            p =>
+                                (p.clientToken || p.id) !==
+                                myClientToken &&
+                                p.connected !== false &&
+                                !p.eliminated
+                        );
+
+                    if (successor) {
+
+                        await sendRealtimeMessage({
+
+                            type:
+                                'HOST_LEFT',
+
+                            newHostToken:
+                                successor.clientToken ||
+                                successor.id,
+
+                            players:
+                                players,
+
+                            currentTurnIndex:
+                                currentTurnIndex,
+
+                            turnPhase:
+                                turnPhase,
+
+                            deck:
+                                deck,
+
+                            discardPile:
+                                discardPile,
+
+                            roundActive:
+                                roundActive
+                        });
+                    }
+
+                } else {
+
+                    await sendRealtimeMessage({
+                        type:
+                            'PLAYER_LEFT',
+
+                        clientToken:
+                            myClientToken
+                    });
+                }
+
+            } catch (e) {}
+        }
+
+        try {
+
+            if (roomChannel)
+                await supabaseClient.removeChannel(
+                    roomChannel
+                );
+
+        } catch (e) {}
+
+        try {
+            if (roomChannel) await supabaseClient.removeChannel(roomChannel);
+        } catch (e) {}
+        roomChannel = null;
+        try { localStorage.removeItem('leastCountGameSession'); } catch (e) {}
+        isHost = false;
+        isSoloMode = false;
+        myId = '';
+        roomCode = '';
+        players = [];
+        myIndex = 0;
+        gameHistory = [];
+        roundCounter = 0;
+        deck = [];
+        discardPile = [];
+        currentTurnIndex = 0;
+        roundActive = false;
+        turnPhase = 'drop';
+        pendingRejoinRequest = null;
+        document.getElementById('lobby-screen').classList.remove('hidden');
+        document.getElementById('waiting-screen').classList.add('hidden');
+        document.getElementById('game-board-screen').classList.add('hidden');
+        document.getElementById('room-badge').classList.add('hidden');
+        document.getElementById('sticky-scores-wrapper').classList.add('hidden');
+        document.getElementById('game-status-banner').classList.add('hidden');
+        document.getElementById('rejoin-request-modal').classList.add('hidden');
+        document.getElementById('history-modal').classList.add('hidden');
+        document.getElementById('scoreboard-modal').classList.add('hidden');
+        document.getElementById('round-over-modal').classList.add('hidden');
+        document.getElementById('lobby-error').classList.add('hidden');
+        logTicker('Ready');
+        refreshPublicRoomsList();
+    }
+
+    // ============================================================
+    // REMOVE PLAYER
+    // ============================================================
+
+    function confirmRemovePlayer(
+        targetPeerId,
+        targetPlayerName
+    ) {
+
+        if (
+            confirm(
+                `Are you sure you want to remove this player (${targetPlayerName})?`
+            )
+        ) {
+
+            players =
+                players.filter(
+                    p =>
+                        p.id !== targetPeerId
+                );
+
+            sendRealtimeMessage({
+                type:
+                    'KICKED_PLAYER',
+
+                kickedId:
+                    targetPeerId
+            });
+
+            broadcastPlayerList();
+
+            if (roundActive) {
+
+                if (
+                    currentTurnIndex >=
+                    players.length
+                )
+                    currentTurnIndex = 0;
+
+                broadcastGameState(
+                    "Player removed by host."
+                );
+            }
+
+            updateWaitingRoomUI();
+            renderGameBoard();
+
+            logTicker(
+                `Removed ${targetPlayerName} from the game.`
+            );
+        }
+    }
+
+    // ============================================================
+    // TRANSFER HOST
+    // ============================================================
+
+    function confirmTransferHost(
+        targetPeerId,
+        targetPlayerName
+    ) {
+
+        if (
+            confirm(
+                `Are you sure you want to make ${targetPlayerName} the host?`
+            )
+        ) {
+
+            players.forEach(p => {
+
+                p.isHost =
+                    (
+                        p.id === targetPeerId ||
+                        p.clientToken === targetPeerId
+                    );
+            });
+
+            let newHost =
+                players.find(
+                    p => p.isHost
+                );
+
+            if (newHost) {
+
+                isHost =
+                    (
+                        newHost.clientToken ===
+                        myClientToken ||
+                        newHost.id === myId
+                    );
+            }
+
+            sendRealtimeMessage({
+
+                type:
+                    'HOST_TRANSFERRED',
+
+                newHostToken:
+                    newHost
+                        ? (
+                            newHost.clientToken ||
+                            newHost.id
+                        )
+                        : null,
+
+                players:
+                    players
+            });
+
+            updateWaitingRoomUI();
+            renderGameBoard();
+
+            logTicker(
+                `Transferred host to ${targetPlayerName}.`
+            );
+        }
+    }
+
+    // ============================================================
+    // MODALS
+    // ============================================================
+
+    function toggleScoreboardModal(show) {
+
+        document.getElementById(
+            'scoreboard-modal'
+        ).classList.toggle(
+            'hidden',
+            !show
+        );
+
+        if (show) {
+
+            document.getElementById(
+                'modal-standings-title'
+            ).innerText =
+                `Tournament Standings (Max ${targetEliminationPoints})`;
+
+            updateScoreboardTable();
+        }
+    }
+
+    function toggleInstructionsModal(show) {
+        const modal = document.getElementById('instructions-modal');
+        if (!modal) return;
+        modal.classList.toggle('hidden', !show);
+    }
+
+    function toggleHistoryModal(show) {
+
+        document.getElementById(
+            'history-modal'
+        ).classList.toggle(
+            'hidden',
+            !show
+        );
+
+        if (show)
+            updateHistoryContainer();
+    }
+
+    function closeRoundOverModal() {
+
+        document.getElementById(
+            'round-over-modal'
+        ).classList.add('hidden');
+    }
+
+    function generateShortCode() {
+
+        const chars =
+            'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+        let code = '';
+
+        for (let i = 0; i < 6; i++) {
+
+            code +=
+                chars.charAt(
+                    Math.floor(
+                        Math.random() *
+                        chars.length
+                    )
+                );
+        }
+
+        return code;
+    }
+
+    function resetJoinButtonState(success) {
+
+        const btn =
+            document.getElementById(
+                'join-room-btn'
+            );
+
+        if (btn) {
+
+            btn.disabled = false;
+            btn.innerText = "Join Code";
+
+            btn.classList.remove(
+                'opacity-50',
+                'bg-emerald-600'
+            );
+
+            btn.classList.add(
+                'bg-amber-500'
+            );
+        }
+    }
+
+    // ============================================================
+    // SOLO MODE
+    // ============================================================
+
+    function startSoloGame() {
+
+        myName =
+            document.getElementById(
+                'nickname-input'
+            ).value.trim() ||
+            "Player";
+
+        cardsPerPlayer =
+            parseInt(
+                document.getElementById(
+                    'cards-count-select'
+                ).value
+            );
+
+        targetEliminationPoints =
+            parseInt(
+                document.getElementById(
+                    'target-points-select'
+                ).value
+            );
+
+        maxPlayersLimit =
+            parseInt(
+                document.getElementById(
+                    'max-players-select'
+                ).value
+            );
+
+        isSoloMode = true;
+        isHost = true;
+
+        myId = 'player-me';
+        roomCode = 'SOLO';
+
+        gameHistory = [];
+        roundCounter = 0;
+
+        players = [
+            {
+                id: myId,
+                name: myName,
+                isHost: true,
+                scores: 0,
+                hand: [],
+                eliminated: false,
+                isBot: false,
+                connected: true,
+                viewOnly: false,
+                rejoinPending: false
+            }
+        ];
+
+        for (
+            let i = 1;
+            i < maxPlayersLimit;
+            i++
+        ) {
+
+            players.push({
+                id: `bot-${i}`,
+                name: `Bot ${i}`,
+                isHost: false,
+                scores: 0,
+                hand: [],
+                eliminated: false,
+                isBot: true,
+                connected: true,
+                viewOnly: false,
+                rejoinPending: false
+            });
+        }
+
+        myIndex = 0;
+
+        let fullDeck =
+            createDeck();
+
+        players.forEach(p => {
+
+            p.hand =
+                sortHandCards(
+                    fullDeck.splice(
+                        0,
+                        cardsPerPlayer
+                    )
+                );
+
+            p.eliminated = false;
+        });
+
+        discardPile =
+            [fullDeck.pop()];
+
+        deck =
+            fullDeck;
+
+        currentTurnIndex = 0;
+        turnPhase = 'drop';
+        roundActive = true;
+
+        document.getElementById(
+            'lobby-screen'
+        ).classList.add('hidden');
+
+        document.getElementById(
+            'game-board-screen'
+        ).classList.remove('hidden');
+
+        document.getElementById(
+            'room-badge'
+        ).classList.add('hidden');
+
+        document.getElementById(
+            'sticky-scores-wrapper'
+        ).classList.remove('hidden');
+
+        document.getElementById(
+            'game-status-banner'
+        ).classList.remove('hidden');
+
+        document.getElementById(
+            'game-status-banner'
+        ).innerText =
+            "Solo vs Computer Mode";
+
+        renderGameBoard();
+
+        logTicker(
+            "Solo game started against Computer bots!"
+        );
+
+        checkBotTurn();
+    }
+
+    // ============================================================
+    // CREATE ROOM
+    // ============================================================
+
+    function createRoom() {
+
+        isSoloMode = false;
+
+        myName =
+            document.getElementById(
+                'nickname-input'
+            ).value.trim();
+
+        if (!myName) {
+
+            showLobbyError(
+                "Please enter your nickname."
+            );
+
+            return;
+        }
+
+        maxPlayersLimit =
+            parseInt(
+                document.getElementById(
+                    'max-players-select'
+                ).value
+            );
+
+        cardsPerPlayer =
+            parseInt(
+                document.getElementById(
+                    'cards-count-select'
+                ).value
+            );
+
+        targetEliminationPoints =
+            parseInt(
+                document.getElementById(
+                    'target-points-select'
+                ).value
+            );
+
+        isHost = true;
+        myId = myClientToken;
+
+        roomCode =
+            generateShortCode();
+
+        roundActive = false;
+        gameHistory = [];
+        roundCounter = 0;
+
+        players = [
+            {
+                id: myId,
+                name: myName,
+                clientToken: myClientToken,
+                connected: true,
+                isHost: true,
+                scores: 0,
+                hand: [],
+                eliminated: false,
+                isBot: false,
+
+                // NEW REJOIN FIELDS
+                viewOnly: false,
+                rejoinPending: false
+            }
+        ];
+
+        myIndex = 0;
+
+        initRealtimeChannel(roomCode);
+
+        document.getElementById(
+            'lobby-screen'
+        ).classList.add('hidden');
+
+        document.getElementById(
+            'waiting-screen'
+        ).classList.remove('hidden');
+
+        document.getElementById(
+            'display-room-code'
+        ).innerText =
+            roomCode;
+
+        document.getElementById(
+            'max-count'
+        ).innerText =
+            maxPlayersLimit;
+
+        document.getElementById(
+            'display-cards-count'
+        ).innerText =
+            cardsPerPlayer;
+
+        document.getElementById(
+            'display-target-pts'
+        ).innerText =
+            targetEliminationPoints;
+
+        document.getElementById(
+            'host-controls'
+        ).classList.remove('hidden');
+
+        document.getElementById(
+            'waiting-msg'
+        ).classList.add('hidden');
+
+        updateWaitingRoomUI();
+
+        registerPublicRoom(
+            'waiting',
+            'no'
+        );
+
+        logTicker(
+            `Room active! Code: ${roomCode}`
+        );
+    }
+
+    // ============================================================
+    // JOIN ROOM
+    // ============================================================
+
+    function joinRoom() {
+
+        isSoloMode = false;
+
+        myName =
+            document.getElementById(
+                'nickname-input'
+            ).value.trim();
+
+        let codeInput =
+            document.getElementById(
+                'join-room-input'
+            ).value
+            .trim()
+            .toUpperCase()
+            .replace(
+                /[^A-Z0-9]/g,
+                ''
+            );
+
+        if (
+            !myName ||
+            !codeInput
+        ) {
+
+            showLobbyError(
+                "Enter your nickname and Room Code."
+            );
+
+            return;
+        }
+
+        const joinBtn =
+            document.getElementById(
+                'join-room-btn'
+            );
+
+        if (joinBtn) {
+
+            joinBtn.disabled = true;
+            joinBtn.innerText =
+                "Connecting...";
+
+            joinBtn.classList.add(
+                'opacity-50',
+                'bg-emerald-600'
+            );
+
+            joinBtn.classList.remove(
+                'bg-amber-500'
+            );
+        }
+
+        isHost = false;
+        myId = myClientToken;
+        roomCode = codeInput;
+        gameHistory = [];
+
+        initRealtimeChannel(roomCode);
+    }
+
+    function showLobbyError(msg) {
+
+        const el =
+            document.getElementById(
+                'lobby-error'
+            );
+
+        el.innerText = msg;
+
+        el.classList.remove(
+            'hidden'
+        );
+
+        setTimeout(
+            () =>
+                el.classList.add(
+                    'hidden'
+                ),
+            4500
+        );
+    }
+
+    // ============================================================
+    // PLAYER LIST BROADCAST
+    // ============================================================
+
+    function broadcastPlayerList() {
+
+        sendRealtimeMessage({
+
+            type:
+                'UPDATE_PLAYERS',
+
+            players:
+                players,
+
+            maxPlayers:
+                maxPlayersLimit,
+
+            cardsPerPlayer:
+                cardsPerPlayer,
+
+            targetPoints:
+                targetEliminationPoints
+        });
+    }
+
+    // ============================================================
+    // WAITING ROOM UI
+    // ============================================================
+
+    function updateWaitingRoomUI() {
+
+        document.getElementById(
+            'connected-count'
+        ).innerText =
+            players.filter(
+                p =>
+                    p.connected !== false
+            ).length;
+
+        document.getElementById(
+            'display-cards-count'
+        ).innerText =
+            cardsPerPlayer;
+
+        document.getElementById(
+            'display-target-pts'
+        ).innerText =
+            targetEliminationPoints;
+
+        const ul =
+            document.getElementById(
+                'player-list-ul'
+            );
+
+        ul.innerHTML = '';
+
+        players.forEach(p => {
+
+            let li =
+                document.createElement(
+                    'li'
+                );
+
+            li.className =
+                'bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-xl text-xs sm:text-sm flex justify-between items-center';
+
+            let actionsHtml = '';
+
+            if (
+                isHost &&
+                !p.isHost &&
+                p.id !== myId
+            ) {
+
+                actionsHtml =
+                    `<div class="flex space-x-1">
+                        <button onclick="confirmTransferHost('${p.id}', '${p.name.replace(/'/g, "\\'")}')"
+                                class="bg-amber-600/85 hover:bg-amber-600 text-white px-2 py-0.5 rounded text-[10px] font-bold transition">
+                            Make Host
+                        </button>
+
+                        <button onclick="confirmRemovePlayer('${p.id}', '${p.name.replace(/'/g, "\\'")}')"
+                                class="bg-rose-600/85 hover:bg-rose-600 text-white px-2 py-0.5 rounded text-[10px] font-bold transition">
+                            Remove
+                        </button>
+                    </div>`;
+            }
+
+            let connectionStatus = '';
+
+            if (p.rejoinPending) {
+
+                connectionStatus =
+                    ` <span class="text-amber-400">
+                        (rejoin request pending)
+                    </span>`;
+
+            } else if (
+                p.viewOnly
+            ) {
+
+                connectionStatus =
+                    ` <span class="text-indigo-400">
+                        (view only)
+                    </span>`;
+
+            } else if (
+                p.connected === false
+            ) {
+
+                connectionStatus =
+                    ` <span class="text-rose-400">
+                        (reconnecting...)
+                    </span>`;
+            }
+
+            li.innerHTML =
+                `<div class="flex items-center space-x-2">
+                    👤 ${p.name}
+                    ${connectionStatus}
+
+                    ${p.isHost
+                        ? '<span class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded">Host</span>'
+                        : ''
+                    }
+                </div>
+                ${actionsHtml}`;
+
+            ul.appendChild(li);
+        });
+    }
+
+    // ============================================================
+    // CHAT SYSTEM
+    // ============================================================
+
+    const roomChatMessages = [];
+    const seenChatMessageIds = new Set();
+
+    function sendRoomChatMessage() {
+
+        const inputEl =
+            document.getElementById(
+                'room-chat-input'
+            );
+
+        if (!inputEl) return;
+
+        const text =
+            inputEl.value.trim();
+
+        if (!text) return;
+
+        inputEl.value = '';
+
+        const senderName =
+            myName || "Player";
+
+        const senderToken =
+            myClientToken || myId;
+
+        const messageId =
+            `${senderToken}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+        if (isSoloMode) {
+
+            displayChatMessageLocally(
+                senderName,
+                text,
+                messageId
+            );
+
+        } else {
+
+            displayChatMessageLocally(
+                senderName,
+                text,
+                messageId
+            );
+
+            sendRealtimeMessage({
+
+                type:
+                    'ROOM_CHAT_MESSAGE',
+
+                messageId:
+                    messageId,
+
+                senderToken:
+                    senderToken,
+
+                senderName:
+                    senderName,
+
+                text:
+                    text
+            });
+        }
+    }
+
+    function displayChatMessageLocally(
+        senderName,
+        text,
+        messageId
+    ) {
+
+        const chatBanner =
+            document.getElementById(
+                'chat-messages-banner'
+            );
+
+        const historyList =
+            document.getElementById(
+                'chat-history-list'
+            );
+
+        if (
+            !chatBanner ||
+            !historyList
+        )
+            return;
+
+        const safeId =
+            messageId ||
+            `${senderName}-${text}-${Date.now()}`;
+
+        if (
+            seenChatMessageIds.has(
+                safeId
+            )
+        )
+            return;
+
+        seenChatMessageIds.add(
+            safeId
+        );
+
+        roomChatMessages.push({
+            senderName:
+                senderName || 'Player',
+
+            text:
+                text || '',
+
+            id:
+                safeId
+        });
+
+        if (
+            roomChatMessages.length > 3
+        )
+            roomChatMessages.shift();
+
+        historyList.innerHTML = '';
+
+        [...roomChatMessages]
+            .reverse()
+            .forEach(message => {
+
+                const row =
+                    document.createElement(
+                        'div'
+                    );
+
+                row.className =
+                    'leading-4 break-words';
+
+                const sender =
+                    document.createElement(
+                        'span'
+                    );
+
+                sender.className =
+                    'font-bold text-amber-300 mr-1';
+
+                sender.textContent =
+                    `${message.senderName}:`;
+
+                const body =
+                    document.createElement(
+                        'span'
+                    );
+
+                body.className =
+                    'text-white';
+
+                body.textContent =
+                    message.text;
+
+                row.appendChild(sender);
+                row.appendChild(body);
+
+                historyList.appendChild(row);
+            });
+
+        chatBanner.classList.remove(
+            'hidden'
+        );
+
+        chatBanner.classList.add(
+            'flex'
+        );
+    }
+
+    // ============================================================
+    // INCOMING NETWORK DATA
+    // ============================================================
+
+    function handleIncomingNetworkData(data) {
+
+        // ========================================================
+        // HOST SIDE
+        // ========================================================
+
+        if (isHost) {
+
+            // ----------------------------------------------------
+            // EXISTING PLAYER / NEW PLAYER JOIN REQUEST
+            // ----------------------------------------------------
+
+            if (data.type === 'JOIN_REQUEST') {
+
+                let existingPlayer =
+                    players.find(
+                        p =>
+                            p.clientToken ===
+                                data.clientToken ||
+                            p.id ===
+                                data.clientToken
+                    );
+
+                /*
+                 * NEW FEATURE:
+                 *
+                 * If the player already exists in the room,
+                 * this is a REJOIN request.
+                 *
+                 * Do not automatically reconnect them.
+                 */
+                if (existingPlayer) {
+
+                    /*
+                     * If the player is already connected,
+                     * keep existing behavior.
+                     */
+                    if (
+                        existingPlayer.connected !== false &&
+                        !existingPlayer.rejoinPending
+                    ) {
+
+                        existingPlayer.connected =
+                            true;
+
+                        existingPlayer.viewOnly =
+                            false;
+
+                        broadcastPlayerList();
+
+                        updateWaitingRoomUI();
+
+                        if (roundActive) {
+
+                            sendRealtimeMessage({
+
+                                type:
+                                    'GAME_STATE_UPDATE',
+
+                                players:
+                                    players,
+
+                                deck:
+                                    deck,
+
+                                discardPile:
+                                    discardPile,
+
+                                currentTurnIndex:
+                                    currentTurnIndex,
+
+                                turnPhase:
+                                    turnPhase,
+
+                                message:
+                                    `${existingPlayer.name} is already connected.`
+                            });
+
+                        } else {
+
+                            logTicker(
+                                `${existingPlayer.name} rejoined.`
+                            );
+                        }
+
+                        return;
+                    }
+
+                    /*
+                     * PLAYER IS EXITED.
+                     *
+                     * Store the request but keep player
+                     * disconnected until host decides.
+                     */
+                    existingPlayer.rejoinPending =
+                        true;
+
+                    existingPlayer.connected =
+                        false;
+
+                    /*
+                     * Keep previous hand, score,
+                     * elimination status and all
+                     * existing game information.
+                     */
+                    showRejoinRequestNotification(
+                        existingPlayer
+                    );
+
+                    updateWaitingRoomUI();
+
+                    logTicker(
+                        `${existingPlayer.name} is requesting permission to rejoin.`
+                    );
+
+                    return;
+                }
+
+                /*
+                 * If game has already started, a player who
+                 * does not already exist cannot join.
+                 */
+                if (roundActive) {
+
+                    sendRealtimeMessage({
+
+                        type:
+                            'REJECT',
+
+                        targetToken:
+                            data.clientToken,
+
+                        reason:
+                            'Game already started. Only previous players can request rejoin.'
+                    });
+
+                    return;
+                }
+
+                if (
+                    players.length >=
+                    maxPlayersLimit
+                ) {
+
+                    sendRealtimeMessage({
+
+                        type:
+                            'REJECT',
+
+                        targetToken:
+                            data.clientToken,
+
+                        reason:
+                            'Room is full.'
+                    });
+
+                    return;
+                }
+
+                /*
+                 * BRAND NEW PLAYER.
+                 *
+                 * Existing behavior remains the same.
+                 */
+                let newPlayer = {
+
+                    id:
+                        data.clientToken,
+
+                    name:
+                        data.name || 'Player',
+
+                    clientToken:
+                        data.clientToken,
+
+                    connected:
+                        true,
+
+                    isHost:
+                        false,
+
+                    scores:
+                        0,
+
+                    hand:
+                        [],
+
+                    eliminated:
+                        false,
+
+                    isBot:
+                        false,
+
+                    viewOnly:
+                        false,
+
+                    rejoinPending:
+                        false
+                };
+
+                players.push(
+                    newPlayer
+                );
+
+                broadcastPlayerList();
+
+                updateWaitingRoomUI();
+
+                logTicker(
+                    `${newPlayer.name} joined.`
+                );
+            }
+
+            // ----------------------------------------------------
+            // PLAYER ACTION
+            // ----------------------------------------------------
+
+            else if (
+                data.type ===
+                'PLAYER_ACTION'
+            ) {
+
+                handleHostAction(data);
+            }
+
+            // ----------------------------------------------------
+            // CALL SHOW
+            // ----------------------------------------------------
+
+            else if (
+                data.type ===
+                'CALL_SHOW'
+            ) {
+
+                handleHostShowCall(
+                    data.peerId
+                );
+            }
+
+            // ----------------------------------------------------
+            // CHAT
+            // ----------------------------------------------------
+
+            else if (
+                data.type ===
+                'ROOM_CHAT_MESSAGE'
+            ) {
+
+                if (
+                    data.forwardedByHost
+                )
+                    return;
+
+                displayChatMessageLocally(
+                    data.senderName,
+                    data.text,
+                    data.messageId
+                );
+
+                if (
+                    data.senderToken !==
+                    myClientToken
+                ) {
+
+                    sendRealtimeMessage({
+                        ...data,
+                        forwardedByHost:
+                            true
+                    });
+                }
+            }
+
+            // ----------------------------------------------------
+            // PLAYER LEFT
+            // ----------------------------------------------------
+
+            else if (
+                data.type ===
+                'PLAYER_LEFT'
+            ) {
+
+                const leaving =
+                    players.find(
+                        p =>
+                            p.clientToken ===
+                                data.clientToken ||
+                            p.id ===
+                                data.clientToken
+                    );
+
+                if (leaving) {
+
+                    leaving.connected =
+                        false;
+
+                    leaving.viewOnly =
+                        false;
+
+                    leaving.rejoinPending =
+                        false;
+
+                    if (
+                        roundActive &&
+                        players[currentTurnIndex] &&
+                        (
+                            players[currentTurnIndex].clientToken ===
+                                data.clientToken ||
+                            players[currentTurnIndex].id ===
+                                data.clientToken
+                        )
+                    ) {
+
+                        advanceTurn();
+                    }
+
+                    broadcastPlayerList();
+
+                    if (roundActive) {
+
+                        broadcastGameState(
+                            `${leaving.name} exited. Continuing without them.`
+                        );
+                    }
+
+                    updateWaitingRoomUI();
+                    renderGameBoard();
+                }
+            }
+
+            // ----------------------------------------------------
+            // NEXT ROUND REQUEST
+            // ----------------------------------------------------
+
+            else if (
+                data.type ===
+                'START_NEXT_ROUND_REQUEST'
+            ) {
+
+                if (!roundActive)
+                    startNextRound();
+            }
+
+            return;
+        }
+
+        // ========================================================
+        // GUEST SIDE
+        // ========================================================
+
+        switch (data.type) {
+
+            // ----------------------------------------------------
+            // REJECT
+            // ----------------------------------------------------
+
+            case 'REJECT':
+
+                if (
+                    data.targetToken ===
+                    myClientToken
+                ) {
+
+                    resetJoinButtonState(
+                        false
+                    );
+
+                    showLobbyError(
+                        "Rejected: " +
+                        data.reason
+                    );
+                }
+
+                break;
+
+            // ----------------------------------------------------
+            // KICKED
+            // ----------------------------------------------------
+
+            case 'KICKED_PLAYER':
+
+                if (
+                    data.kickedId ===
+                    myClientToken
+                ) {
+
+                    alert(
+                        "You were removed by host."
+                    );
+
+                    location.reload();
+                }
+
+                break;
+
+            // ----------------------------------------------------
+            // NEW REJOIN PERMISSION RESPONSE
+            // ----------------------------------------------------
+
+            case 'REJOIN_PERMISSION_RESPONSE':
+
+                /*
+                 * Only the requested player handles this.
+                 */
+                if (
+                    data.targetToken !==
+                    myClientToken
+                )
+                    break;
+
+                if (
+                    data.permission ===
+                    'deny'
+                ) {
+
+                    showLobbyError(
+                        "The host denied your rejoin request."
+                    );
+
+                    resetJoinButtonState(
+                        false
+                    );
+
+                    try {
+                        if (roomChannel)
+                            supabaseClient.removeChannel(
+                                roomChannel
+                            );
+                    } catch (e) {}
+
+                    setTimeout(
+                        () => location.reload(),
+                        1200
+                    );
+
+                    break;
+                }
+
+                /*
+                 * Host allowed VIEW ONLY.
+                 */
+                if (
+                    data.permission ===
+                    'view'
+                ) {
+
+                    players =
+                        data.players ||
+                        players;
+
+                    deck =
+                        data.deck ||
+                        deck;
+
+                    discardPile =
+                        data.discardPile ||
+                        discardPile;
+
+                    if (
+                        data.currentTurnIndex !==
+                        undefined
+                    )
+                        currentTurnIndex =
+                            data.currentTurnIndex;
+
+                    if (
+                        data.turnPhase !==
+                        undefined
+                    )
+                        turnPhase =
+                            data.turnPhase;
+
+                    if (
+                        data.roundActive !==
+                        undefined
+                    )
+                        roundActive =
+                            data.roundActive;
+
+                    gameHistory =
+                        data.gameHistory ||
+                        gameHistory;
+
+                    myIndex =
+                        players.findIndex(
+                            p =>
+                                p.id ===
+                                myId ||
+                                p.clientToken ===
+                                myClientToken
+                        );
+
+                    let me =
+                        players[myIndex];
+
+                    if (me) {
+
+                        me.connected =
+                            false;
+
+                        me.viewOnly =
+                            true;
+
+                        me.rejoinPending =
+                            false;
+                    }
+
+                    document.getElementById(
+                        'lobby-screen'
+                    ).classList.add(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'waiting-screen'
+                    ).classList.add(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'game-board-screen'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'room-badge'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'sticky-scores-wrapper'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'current-room-id'
+                    ).innerText =
+                        roomCode;
+
+                    document.getElementById(
+                        'game-status-banner'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'game-status-banner'
+                    ).innerText =
+                        "View Only Mode";
+
+                    renderGameBoard();
+
+                    logTicker(
+                        "Host allowed you to view the game only."
+                    );
+
+                    break;
+                }
+
+                /*
+                 * Host allowed PLAY.
+                 */
+                if (
+                    data.permission ===
+                    'play'
+                ) {
+
+                    players =
+                        data.players ||
+                        players;
+
+                    deck =
+                        data.deck ||
+                        deck;
+
+                    discardPile =
+                        data.discardPile ||
+                        discardPile;
+
+                    if (
+                        data.currentTurnIndex !==
+                        undefined
+                    )
+                        currentTurnIndex =
+                            data.currentTurnIndex;
+
+                    if (
+                        data.turnPhase !==
+                        undefined
+                    )
+                        turnPhase =
+                            data.turnPhase;
+
+                    if (
+                        data.roundActive !==
+                        undefined
+                    )
+                        roundActive =
+                            data.roundActive;
+
+                    gameHistory =
+                        data.gameHistory ||
+                        gameHistory;
+
+                    myIndex =
+                        players.findIndex(
+                            p =>
+                                p.id ===
+                                myId ||
+                                p.clientToken ===
+                                myClientToken
+                        );
+
+                    let me =
+                        players[myIndex];
+
+                    if (me) {
+
+                        me.connected =
+                            true;
+
+                        me.viewOnly =
+                            false;
+
+                        me.rejoinPending =
+                            false;
+                    }
+
+                    document.getElementById(
+                        'lobby-screen'
+                    ).classList.add(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'waiting-screen'
+                    ).classList.add(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'game-board-screen'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'room-badge'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'sticky-scores-wrapper'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'current-room-id'
+                    ).innerText =
+                        roomCode;
+
+                    document.getElementById(
+                        'game-status-banner'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    document.getElementById(
+                        'game-status-banner'
+                    ).innerText =
+                        "Playing";
+
+                    renderGameBoard();
+
+                    logTicker(
+                        "Host allowed you to continue playing."
+                    );
+
+                    break;
+                }
+
+                break;
+
+            // ----------------------------------------------------
+            // HOST TRANSFERRED
+            // ----------------------------------------------------
+
+            case 'HOST_TRANSFERRED':
+
+                players =
+                    data.players ||
+                    players;
+
+                players.forEach(p => {
+
+                    p.isHost =
+                        (
+                            p.clientToken ||
+                            p.id
+                        ) ===
+                        data.newHostToken;
+                });
+
+                isHost =
+                    data.newHostToken ===
+                    myClientToken;
+
+                if (isHost) {
+
+                    document.getElementById(
+                        'host-controls'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    logTicker(
+                        "You are now the host of this room!"
+                    );
+
+                } else {
+
+                    document.getElementById(
+                        'host-controls'
+                    ).classList.add(
+                        'hidden'
+                    );
+
+                    logTicker(
+                        "Room host has been updated."
+                    );
+                }
+
+                updateWaitingRoomUI();
+                renderGameBoard();
+
+                break;
+
+            // ----------------------------------------------------
+            // HOST LEFT
+            // ----------------------------------------------------
+
+            case 'HOST_LEFT':
+
+                players =
+                    data.players ||
+                    players;
+
+                if (
+                    data.currentTurnIndex !==
+                    undefined
+                )
+                    currentTurnIndex =
+                        data.currentTurnIndex;
+
+                if (
+                    data.turnPhase !==
+                    undefined
+                )
+                    turnPhase =
+                        data.turnPhase;
+
+                if (data.deck)
+                    deck =
+                        data.deck;
+
+                if (data.discardPile)
+                    discardPile =
+                        data.discardPile;
+
+                if (
+                    data.roundActive !==
+                    undefined
+                )
+                    roundActive =
+                        data.roundActive;
+
+                players.forEach(p => {
+
+                    p.isHost =
+                        (
+                            p.clientToken ||
+                            p.id
+                        ) ===
+                        data.newHostToken;
+                });
+
+                isHost =
+                    data.newHostToken ===
+                    myClientToken;
+
+                if (isHost) {
+
+                    const me =
+                        players.find(
+                            p =>
+                                p.clientToken ===
+                                    myClientToken ||
+                                p.id ===
+                                    myId
+                        );
+
+                    if (me) {
+
+                        me.isHost = true;
+                        me.connected = true;
+                    }
+
+                    document.getElementById(
+                        'host-controls'
+                    ).classList.remove(
+                        'hidden'
+                    );
+
+                    logTicker(
+                        "Host exited. You are now managing this room."
+                    );
+
+                } else {
+
+                    document.getElementById(
+                        'host-controls'
+                    ).classList.add(
+                        'hidden'
+                    );
+
+                    logTicker(
+                        "Host exited. Room host transferred."
+                    );
+                }
+
+                updateWaitingRoomUI();
+                renderGameBoard();
+
+                break;
+
+            // ----------------------------------------------------
+            // UPDATE PLAYERS
+            // ----------------------------------------------------
+
+            case 'UPDATE_PLAYERS':
+
+                players =
+                    data.players;
+
+                maxPlayersLimit =
+                    data.maxPlayers;
+
+                cardsPerPlayer =
+                    data.cardsPerPlayer ||
+                    cardsPerPlayer;
+
+                targetEliminationPoints =
+                    data.targetPoints;
+
+                resetJoinButtonState(
+                    true
+                );
+
+                document.getElementById(
+                    'lobby-screen'
+                ).classList.add(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'waiting-screen'
+                ).classList.remove(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'display-room-code'
+                ).innerText =
+                    roomCode;
+
+                document.getElementById(
+                    'max-count'
+                ).innerText =
+                    maxPlayersLimit;
+
+                updateWaitingRoomUI();
+
+                break;
+
+            // ----------------------------------------------------
+            // START GAME
+            // ----------------------------------------------------
+
+            case 'START_GAME':
+
+                players =
+                    data.players;
+
+                deck =
+                    data.deck;
+
+                discardPile =
+                    data.discardPile;
+
+                currentTurnIndex =
+                    data.currentTurnIndex;
+
+                cardsPerPlayer =
+                    data.cardsPerPlayer ||
+                    cardsPerPlayer;
+
+                targetEliminationPoints =
+                    data.targetPoints ||
+                    targetEliminationPoints;
+
+                gameHistory =
+                    data.gameHistory ||
+                    gameHistory;
+
+                roundActive = true;
+
+                myIndex =
+                    players.findIndex(
+                        p =>
+                            p.id ===
+                            myId ||
+                            p.clientToken ===
+                            myClientToken
+                    );
+
+                document.getElementById(
+                    'waiting-screen'
+                ).classList.add(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'round-over-modal'
+                ).classList.add(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'game-board-screen'
+                ).classList.remove(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'room-badge'
+                ).classList.remove(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'sticky-scores-wrapper'
+                ).classList.remove(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'current-room-id'
+                ).innerText =
+                    roomCode;
+
+                document.getElementById(
+                    'game-status-banner'
+                ).classList.remove(
+                    'hidden'
+                );
+
+                renderGameBoard();
+
+                break;
+
+            // ----------------------------------------------------
+            // GAME STATE UPDATE
+            // ----------------------------------------------------
+
+            case 'GAME_STATE_UPDATE':
+
+                players =
+                    data.players;
+
+                deck =
+                    data.deck;
+
+                discardPile =
+                    data.discardPile;
+
+                currentTurnIndex =
+                    data.currentTurnIndex;
+
+                turnPhase =
+                    data.turnPhase;
+
+                roundActive = true;
+
+                myIndex =
+                    players.findIndex(
+                        p =>
+                            p.id ===
+                            myId ||
+                            p.clientToken ===
+                            myClientToken
+                    );
+
+                document.getElementById(
+                    'waiting-screen'
+                ).classList.add(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'lobby-screen'
+                ).classList.add(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'game-board-screen'
+                ).classList.remove(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'round-over-modal'
+                ).classList.add(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'room-badge'
+                ).classList.remove(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'sticky-scores-wrapper'
+                ).classList.remove(
+                    'hidden'
+                );
+
+                document.getElementById(
+                    'current-room-id'
+                ).innerText =
+                    roomCode;
+
+                document.getElementById(
+                    'game-status-banner'
+                ).classList.remove(
+                    'hidden'
+                );
+
+                /*
+                 * Keep View Only status based on the
+                 * player's synchronized player object.
+                 */
+                let syncedMe =
+                    players[myIndex];
+
+                if (
+                    syncedMe &&
+                    syncedMe.viewOnly === true
+                ) {
+
+                    document.getElementById(
+                        'game-status-banner'
+                    ).innerText =
+                        "View Only Mode";
+
+                } else {
+
+                    document.getElementById(
+                        'game-status-banner'
+                    ).innerText =
+                        "Playing";
+                }
+
+                renderGameBoard();
+
+                logTicker(
+                    data.message
+                );
+
+                break;
+
+            // ----------------------------------------------------
+            // CHAT
+            // ----------------------------------------------------
+
+            case 'ROOM_CHAT_MESSAGE':
+
+                displayChatMessageLocally(
+                    data.senderName,
+                    data.text,
+                    data.messageId
+                );
+
+                break;
+
+            // ----------------------------------------------------
+            // ROUND OVER
+            // ----------------------------------------------------
+
+            case 'ROUND_OVER':
+
+                players =
+                    data.players ||
+                    players;
+
+                gameHistory =
+                    data.gameHistory ||
+                    gameHistory;
+
+                roundActive = false;
+
+                myIndex =
+                    players.findIndex(
+                        p =>
+                            p.id ===
+                            myId ||
+                            p.clientToken ===
+                            myClientToken
+                    );
+
+                showRoundOverModal(
+                    data.resultsData,
+                    data.callerName
+                );
+
+                renderGameBoard();
+
+                break;
+        }
+    }
+
+    // ============================================================
+    // DECK
+    // ============================================================
+
+    function createDeck() {
+
+        let d = [];
+
+        for (let s of suits) {
+
+            for (let v of values) {
+
+                let pts = 10;
+
+                if (v === 'A')
+                    pts = 1;
+
+                else if (!isNaN(v))
+                    pts = parseInt(v);
+
+                d.push({
+                    suit:
+                        s,
+
+                    val:
+                        v,
+
+                    points:
+                        pts,
+
+                    uid:
+                        Math.random()
+                            .toString(36)
+                            .substring(2)
+                });
+            }
+        }
+
+        for (
+            let i = d.length - 1;
+            i > 0;
+            i--
+        ) {
+
+            let j =
+                Math.floor(
+                    Math.random() *
+                    (i + 1)
+                );
+
+            [
+                d[i],
+                d[j]
+            ] =
+            [
+                d[j],
+                d[i]
+            ];
+        }
+
+        return d;
+    }
+
+    function calculateHandSum(hand) {
+
+        return hand.reduce(
+            (acc, card) =>
+                acc + card.points,
+            0
+        );
+    }
+
+    // ============================================================
+    // START HOST GAME
+    // ============================================================
+
+    function startHostGame() {
+
+        if (
+            players.filter(
+                p =>
+                    p.connected !== false &&
+                    !p.eliminated &&
+                    p.viewOnly !== true
+            ).length < 2
+        ) {
+
+            alert(
+                "Need at least 2 players to start!"
+            );
+
+            return;
+        }
+
+        roundCounter = 1;
+        gameHistory = [];
+
+        let fullDeck =
+            createDeck();
+
+        players.forEach(p => {
+
+            if (
+                p.connected !== false &&
+                !p.viewOnly
+            ) {
+
+                p.hand =
+                    sortHandCards(
+                        fullDeck.splice(
+                            0,
+                            cardsPerPlayer
+                        )
+                    );
+
+                p.eliminated =
+                    false;
+            }
+        });
+
+        discardPile =
+            [fullDeck.pop()];
+
+        deck =
+            fullDeck;
+
+        currentTurnIndex = 0;
+        turnPhase = 'drop';
+        roundActive = true;
+
+        updateRoomStartedStatus(
+            'yes'
+        );
+
+        let startPayload = {
+
+            type:
+                'START_GAME',
+
+            players:
+                players,
+
+            deck:
+                deck,
+
+            discardPile:
+                discardPile,
+
+            currentTurnIndex:
+                currentTurnIndex,
+
+            targetPoints:
+                targetEliminationPoints,
+
+            cardsPerPlayer:
+                cardsPerPlayer,
+
+            gameHistory:
+                gameHistory
+        };
+
+        sendRealtimeMessage(
+            startPayload
+        );
+
+        document.getElementById(
+            'waiting-screen'
+        ).classList.add(
+            'hidden'
+        );
+
+        document.getElementById(
+            'round-over-modal'
+        ).classList.add(
+            'hidden'
+        );
+
+        document.getElementById(
+            'game-board-screen'
+        ).classList.remove(
+            'hidden'
+        );
+
+        document.getElementById(
+            'room-badge'
+        ).classList.remove(
+            'hidden'
+        );
+
+        document.getElementById(
+            'sticky-scores-wrapper'
+        ).classList.remove(
+            'hidden'
+        );
+
+        document.getElementById(
+            'current-room-id'
+        ).innerText =
+            roomCode;
+
+        document.getElementById(
+            'game-status-banner'
+        ).classList.remove(
+            'hidden'
+        );
+
+        renderGameBoard();
+
+        logTicker(
+            "Game started!"
+        );
+    }
+
+    // ============================================================
+    // GAME STATE BROADCAST
+    // ============================================================
+
+    function broadcastGameState(msg) {
+
+        let payload = {
+
+            type:
+                'GAME_STATE_UPDATE',
+
+            players:
+                players,
+
+            deck:
+                deck,
+
+            discardPile:
+                discardPile,
+
+            currentTurnIndex:
+                currentTurnIndex,
+
+            turnPhase:
+                turnPhase,
+
+            message:
+                msg
+        };
+
+        sendRealtimeMessage(
+            payload
+        );
+    }
+
+    // ============================================================
+    // BOT
+    // ============================================================
+
+    function checkBotTurn() {
+
+        if (
+            !isSoloMode ||
+            !roundActive
+        )
+            return;
+
+        let currentP =
+            players[currentTurnIndex];
+
+        if (
+            currentP &&
+            currentP.isBot &&
+            !currentP.eliminated
+        ) {
+
+            setTimeout(
+                () => {
+                    executeBotTurn(
+                        currentP
+                    );
+                },
+                1200
+            );
+        }
+    }
+
+    function executeBotTurn(bot) {
+
+        if (
+            !roundActive ||
+            currentTurnIndex !==
+                players.findIndex(
+                    p =>
+                        p.id === bot.id
+                )
+        )
+            return;
+
+        let botSum =
+            calculateHandSum(
+                bot.hand
+            );
+
+        if (
+            botSum <= 5 &&
+            Math.random() < 0.7
+        ) {
+
+            executeShowRound(
+                bot.id
+            );
+
+            return;
+        }
+
+        let topCard =
+            discardPile[
+                discardPile.length - 1
+            ];
+
+        let matchCard =
+            bot.hand.find(
+                c =>
+                    topCard &&
+                    c.val ===
+                    topCard.val
+            );
+
+        let dropGroup = [];
+
+        if (matchCard) {
+
+            dropGroup =
+                bot.hand.filter(
+                    c =>
+                        c.val ===
+                        matchCard.val
+                );
+
+        } else {
+
+            bot.hand.sort(
+                (a, b) =>
+                    b.points -
+                    a.points
+            );
+
+            dropGroup =
+                bot.hand.filter(
+                    c =>
+                        c.val ===
+                        bot.hand[0].val
+                );
+        }
+
+        bot.hand =
+            sortHandCards(
+                bot.hand.filter(
+                    c =>
+                        !dropGroup.includes(c)
+                )
+            );
+
+        dropGroup.forEach(
+            c =>
+                discardPile.push(c)
+        );
+
+        let matchesBoard =
+            topCard &&
+            (
+                dropGroup[0].val ===
+                topCard.val
+            );
+
+        if (matchesBoard) {
+
+            advanceTurn();
+
+            syncActionComplete(
+                `${bot.name} matched board drop.`
+            );
+
+            checkBotTurn();
+
+        } else {
+
+            if (
+                deck.length === 0 &&
+                discardPile.length > 1
+            ) {
+
+                let top =
+                    discardPile.pop();
+
+                deck =
+                    discardPile;
+
+                discardPile =
+                    [top];
+            }
+
+            if (deck.length > 0)
+                bot.hand.push(
+                    deck.pop()
+                );
+
+            advanceTurn();
+
+            syncActionComplete(
+                `${bot.name} completed turn.`
+            );
+
+            checkBotTurn();
+        }
+    }
+
+    // ============================================================
+    // CARD CLICK
+    // ============================================================
+
+    function handleCardClick(cardUid) {
+
+        if (!roundActive)
+            return;
+
+        if (
+            currentTurnIndex !==
+            myIndex
+        )
+            return;
+
+        let me =
+            players[myIndex];
+
+        /*
+         * NEW:
+         * View-only players cannot interact.
+         */
+        if (
+            me.eliminated ||
+            me.viewOnly === true ||
+            me.connected === false
+        )
+            return;
+
+        if (turnPhase === 'drop') {
+
+            let cardIndex =
+                me.hand.findIndex(
+                    c =>
+                        c.uid ===
+                        cardUid
+                );
+
+            if (cardIndex === -1)
+                return;
+
+            let selectedCard =
+                me.hand[cardIndex];
+
+            let droppedCards =
+                me.hand.filter(
+                    c =>
+                        c.val ===
+                        selectedCard.val
+                );
+
+            me.hand =
+                sortHandCards(
+                    me.hand.filter(
+                        c =>
+                            c.val !==
+                            selectedCard.val
+                    )
+                );
+
+            let previousTopCard =
+                discardPile[
+                    discardPile.length - 1
+                ];
+
+            droppedCards.forEach(
+                c =>
+                    discardPile.push(c)
+            );
+
+            let matchesBoard =
+                previousTopCard &&
+                (
+                    selectedCard.val ===
+                    previousTopCard.val
+                );
+
+            if (matchesBoard) {
+
+                turnPhase =
+                    'drop';
+
+                advanceTurn();
+
+                syncActionComplete(
+                    `${me.name} dropped matching board card.`
+                );
+
+                checkBotTurn();
+
+            } else {
+
+                turnPhase =
+                    'draw';
+
+                renderGameBoard();
+
+                logTicker(
+                    "Card dropped. Click stock deck to draw."
+                );
+            }
+        }
+    }
+
+    // ============================================================
+    // DRAW
+    // ============================================================
+
+    function drawFromDeck() {
+
+        if (!roundActive)
+            return;
+
+        if (
+            currentTurnIndex !==
+            myIndex
+        )
+            return;
+
+        let me =
+            players[myIndex];
+
+        /*
+         * NEW:
+         * View-only / disconnected players cannot draw.
+         */
+        if (
+            me.viewOnly === true ||
+            me.connected === false ||
+            me.eliminated
+        )
+            return;
+
+        if (
+            turnPhase !== 'draw'
+        )
+            return;
+
+        if (
+            deck.length === 0 &&
+            discardPile.length > 1
+        ) {
+
+            let top =
+                discardPile.pop();
+
+            deck =
+                discardPile;
+
+            discardPile =
+                [top];
+        }
+
+        if (deck.length > 0)
+            me.hand.push(
+                deck.pop()
+            );
+
+        turnPhase =
+            'drop';
+
+        advanceTurn();
+
+        syncActionComplete(
+            `${me.name} drew a card.`
+        );
+
+        checkBotTurn();
+    }
+
+    // ============================================================
+    // ADVANCE TURN
+    // ============================================================
+
+    function advanceTurn() {
+
+        if (!players.length)
+            return;
+
+        let attempts = 0;
+
+        do {
+
+            currentTurnIndex =
+                (
+                    currentTurnIndex +
+                    1
+                ) %
+                players.length;
+
+            attempts++;
+
+        } while (
+            attempts <
+                players.length &&
+            (
+                !players[currentTurnIndex] ||
+                players[currentTurnIndex].eliminated ||
+                players[currentTurnIndex].connected === false ||
+                players[currentTurnIndex].viewOnly === true ||
+                players[currentTurnIndex].rejoinPending === true
+            )
+        );
+    }
+
+    // ============================================================
+    // ACTION SYNC
+    // ============================================================
+
+    function syncActionComplete(msg) {
+
+        if (isHost) {
+
+            if (!isSoloMode)
+                broadcastGameState(msg);
+
+            renderGameBoard();
+
+            logTicker(msg);
+
+        } else {
+
+            /*
+             * Extra protection:
+             * A view-only player cannot send a game action.
+             */
+            let me =
+                players[myIndex];
+
+            if (
+                me &&
+                (
+                    me.viewOnly === true ||
+                    me.connected === false
+                )
+            )
+                return;
+
+            sendRealtimeMessage({
+
+                type:
+                    'PLAYER_ACTION',
+
+                players:
+                    players,
+
+                deck:
+                    deck,
+
+                discardPile:
+                    discardPile,
+
+                currentTurnIndex:
+                    currentTurnIndex,
+
+                turnPhase:
+                    turnPhase,
+
+                message:
+                    msg
+            });
+        }
+    }
+
+    function handleHostAction(data) {
+
+        /*
+         * Verify the player that sent the action is actually
+         * allowed to play.
+         */
+        let actionPlayer =
+            data.players &&
+            data.players.find(
+                p =>
+                    (
+                        p.clientToken ||
+                        p.id
+                    ) ===
+                    (
+                        data.clientToken ||
+                        data.senderId
+                    )
+            );
+
+        /*
+         * Preserve the existing behavior when the identity
+         * is not supplied by the older action payload.
+         */
+        if (
+            actionPlayer &&
+            (
+                actionPlayer.viewOnly === true ||
+                actionPlayer.connected === false
+            )
+        )
+            return;
+
+        players =
+            data.players;
+
+        deck =
+            data.deck;
+
+        discardPile =
+            data.discardPile;
+
+        currentTurnIndex =
+            data.currentTurnIndex;
+
+        turnPhase =
+            data.turnPhase;
+
+        broadcastGameState(
+            data.message
+        );
+
+        renderGameBoard();
+
+        logTicker(
+            data.message
+        );
+    }
+
+    // ============================================================
+    // CALL SHOW
+    // ============================================================
+
+    function callShow() {
+
+        let me =
+            players[myIndex];
+
+        if (!me)
+            return;
+
+        /*
+         * NEW:
+         * View-only players cannot call Show.
+         */
+        if (
+            me.viewOnly === true ||
+            me.connected === false
+        )
+            return;
+
+        if (
+            currentTurnIndex !==
+            myIndex ||
+            turnPhase !== 'drop'
+        )
+            return;
+
+        let sum =
+            calculateHandSum(
+                me.hand
+            );
+
+        if (sum > 5) {
+
+            alert(
+                "Sum must be 5 or less!"
+            );
+
+            return;
+        }
+
+        if (
+            isHost ||
+            isSoloMode
+        ) {
+
+            executeShowRound(
+                myId
+            );
+
+        } else {
+
+            sendRealtimeMessage({
+
+                type:
+                    'CALL_SHOW',
+
+                peerId:
+                    myId
+            });
+        }
+    }
+
+    function handleHostShowCall(
+        callerPeerId
+    ) {
+
+        /*
+         * NEW:
+         * Do not accept Show from a view-only
+         * or disconnected player.
+         */
+        let caller =
+            players.find(
+                p =>
+                    p.id ===
+                        callerPeerId ||
+                    p.clientToken ===
+                        callerPeerId
+            );
+
+        if (
+            !caller ||
+            caller.viewOnly === true ||
+            caller.connected === false
+        )
+            return;
+
+        executeShowRound(
+            callerPeerId
+        );
+    }
+
+    // ============================================================
+    // SHOW ROUND
+    // ============================================================
+
+    function executeShowRound(
+        callerPeerId
+    ) {
+
+        let caller =
+            players.find(
+                p =>
+                    p.id ===
+                        callerPeerId ||
+                    p.clientToken ===
+                        callerPeerId
+            );
+
+        if (!caller)
+            return;
+
+        if (
+            caller.viewOnly === true ||
+            caller.connected === false
+        )
+            return;
+
+        let callerSum =
+            calculateHandSum(
+                caller.hand
+            );
+
+        let summaries = [];
+
+        players.forEach(p => {
+
+            if (
+                !p.eliminated &&
+                p.connected !== false &&
+                p.viewOnly !== true
+            ) {
+
+                summaries.push({
+                    player:
+                        p,
+
+                    sum:
+                        calculateHandSum(
+                            p.hand
+                        )
+                });
+            }
+        });
+
+        let resultsText =
+            `<strong>${caller.name}</strong> called SHOW with sum: <strong>${callerSum}</strong>!<br><br>`;
+
+        let roundRecord = {
+
+            roundNumber:
+                roundCounter++,
+
+            callerName:
+                caller.name,
+
+            callerSum:
+                callerSum,
+
+            details:
+                []
+        };
+
+        let lowerPlayers =
+            summaries.filter(
+                item =>
+                    item.player.id !==
+                        caller.id &&
+                    item.sum <
+                        callerSum
+            );
+
+        if (
+            lowerPlayers.length > 0
+        ) {
+
+            resultsText +=
+                `<span class="text-rose-400 font-bold">
+                    FAILED SHOW! Someone had a lower count.
+                </span><br>`;
+
+            caller.scores += 25;
+
+            roundRecord.outcome =
+                "Failed Show (+25 penalty)";
+
+            summaries.forEach(
+                item => {
+
+                    let ptsAdded =
+                        (
+                            item.player.id ===
+                            caller.id
+                        )
+                            ? 25
+                            : 0;
+
+                    roundRecord.details.push({
+                        name:
+                            item.player.name,
+
+                        sum:
+                            item.sum,
+
+                        pointsAdded:
+                            ptsAdded
+                    });
+                }
+            );
+
+        } else {
+
+            let equalPlayers =
+                summaries.filter(
+                    item =>
+                        item.player.id !==
+                            caller.id &&
+                        item.sum ===
+                            callerSum
+                );
+
+            if (
+                equalPlayers.length > 0
+            ) {
+
+                resultsText +=
+                    `<span class="text-amber-400 font-bold">
+                        MATCHED SHOW!
+                    </span><br>`;
+
+                let matchedIds =
+                    [
+                        caller.id,
+                        ...equalPlayers.map(
+                            m =>
+                                m.player.id
+                        )
+                    ];
+
+                roundRecord.outcome =
+                    "Matched Show";
+
+                summaries.forEach(
+                    item => {
+
+                        let ptsAdded = 0;
+
+                        if (
+                            !matchedIds.includes(
+                                item.player.id
+                            )
+                        ) {
+
+                            item.player.scores +=
+                                item.sum;
+
+                            ptsAdded =
+                                item.sum;
+                        }
+
+                        roundRecord.details.push({
+                            name:
+                                item.player.name,
+
+                            sum:
+                                item.sum,
+
+                            pointsAdded:
+                                ptsAdded
+                        });
+                    }
+                );
+
+            } else {
+
+                resultsText +=
+                    `<span class="text-emerald-400 font-bold">
+                        GOOD SHOW!
+                    </span><br>`;
+
+                roundRecord.outcome =
+                    "Good Show";
+
+                summaries.forEach(
+                    item => {
+
+                        let ptsAdded = 0;
+
+                        if (
+                            item.player.id !==
+                            caller.id
+                        ) {
+
+                            item.player.scores +=
+                                item.sum;
+
+                            ptsAdded =
+                                item.sum;
+                        }
+
+                        roundRecord.details.push({
+                            name:
+                                item.player.name,
+
+                            sum:
+                                item.sum,
+
+                            pointsAdded:
+                                ptsAdded
+                        });
+                    }
+                );
+            }
+        }
+
+        gameHistory.push(
+            roundRecord
+        );
+
+        resultsText +=
+            `<hr class="border-zinc-800 my-2">
+             <div class="text-xs space-y-1">`;
+
+        summaries.forEach(
+            item => {
+
+                resultsText +=
+                    `<div>
+                        ${item.player.name}:
+                        Sum = <strong>${item.sum}</strong>
+                        |
+                        Total = <strong>${item.player.scores}</strong>
+                    </div>`;
+            }
+        );
+
+        resultsText +=
+            `</div>`;
+
+        players.forEach(p => {
+
+            if (
+                p.scores >=
+                targetEliminationPoints
+            )
+                p.eliminated =
+                    true;
+        });
+
+        roundActive = false;
+
+        let payload = {
+
+            type:
+                'ROUND_OVER',
+
+            resultsData:
+                resultsText,
+
+            callerName:
+                caller.name,
+
+            players:
+                players,
+
+            gameHistory:
+                gameHistory
+        };
+
+        showRoundOverModal(
+            resultsText,
+            caller.name
+        );
+
+        renderGameBoard();
+
+        if (
+            isHost &&
+            !isSoloMode
+        ) {
+
+            sendRealtimeMessage(
+                payload
+            );
+        }
+    }
+
+    function showRoundOverModal(
+        htmlContent,
+        callerName
+    ) {
+
+        document.getElementById(
+            'round-over-title'
+        ).innerText =
+            `${callerName.toUpperCase()} CALLED SHOW!`;
+
+        document.getElementById(
+            'round-over-content'
+        ).innerHTML =
+            htmlContent;
+
+        document.getElementById(
+            'round-over-modal'
+        ).classList.remove(
+            'hidden'
+        );
+
+        document.getElementById(
+            'host-next-round-container'
+        ).classList.remove(
+            'hidden'
+        );
+
+        document.getElementById(
+            'waiting-next-round-msg'
+        ).classList.add(
+            'hidden'
+        );
+
+        document.getElementById(
+            'waiting-next-round-msg'
+        ).innerText =
+            "Any connected player can start the next round.";
+    }
+
+    // ============================================================
+    // NEXT ROUND
+    // ============================================================
+
+    function startNextRound() {
+
+        if (
+            !isHost &&
+            !isSoloMode
+        ) {
+
+            /*
+             * View-only player cannot start a round.
+             */
+            let me =
+                players[myIndex];
+
+            if (
+                me &&
+                (
+                    me.viewOnly === true ||
+                    me.connected === false
+                )
+            )
+                return;
+
+            sendRealtimeMessage({
+                type:
+                    'START_NEXT_ROUND_REQUEST',
+
+                clientToken:
+                    myClientToken
+            });
+
+            document.getElementById(
+                'waiting-next-round-msg'
+            ).classList.remove(
+                'hidden'
+            );
+
+            document.getElementById(
+                'waiting-next-round-msg'
+            ).innerText =
+                "Requesting next round...";
+
+            return;
+        }
+
+        let activePlayers =
+            players.filter(
+                p =>
+                    !p.eliminated &&
+                    p.connected !== false &&
+                    p.viewOnly !== true
+            );
+
+        if (
+            activePlayers.length <= 1
+        ) {
+
+            alert(
+                `Tournament Over! Winner is ${activePlayers[0] ? activePlayers[0].name : 'Nobody'}!`
+            );
+
+            location.reload();
+
+            return;
+        }
+
+        let fullDeck =
+            createDeck();
+
+        players.forEach(p => {
+
+            if (
+                !p.eliminated &&
+                p.connected !== false &&
+                p.viewOnly !== true
+            ) {
+
+                p.hand =
+                    sortHandCards(
+                        fullDeck.splice(
+                            0,
+                            cardsPerPlayer
+                        )
+                    );
+            }
+        });
+
+        discardPile =
+            [fullDeck.pop()];
+
+        deck =
+            fullDeck;
+
+        roundActive = true;
+        turnPhase = 'drop';
+
+        // Rotate the opening player each round (round-robin by seat order).
+        // roundCounter is incremented when the previous round is recorded,
+        // so round 2 starts from seat index 1, round 3 from index 2, etc.
+        const eligiblePlayers = players.map((player, index) => ({ player, index }))
+            .filter(({ player }) =>
+                !player.eliminated &&
+                player.connected !== false &&
+                player.viewOnly !== true
+            );
+
+        if (eligiblePlayers.length) {
+            const firstSeat = isSoloMode
+                ? Math.max(0, roundCounter) % Math.max(1, players.length)
+                : Math.max(0, roundCounter - 1) % Math.max(1, players.length);
+
+            let starter = -1;
+            for (let offset = 0; offset < players.length; offset++) {
+                const candidateIndex = (firstSeat + offset) % players.length;
+                if (eligiblePlayers.some(({ index }) => index === candidateIndex)) {
+                    starter = candidateIndex;
+                    break;
+                }
+            }
+            currentTurnIndex = starter >= 0 ? starter : eligiblePlayers[0].index;
+        } else {
+            currentTurnIndex = 0;
+        }
+
+        let startPayload = {
+
+            type:
+                'START_GAME',
+
+            players:
+                players,
+
+            deck:
+                deck,
+
+            discardPile:
+                discardPile,
+
+            currentTurnIndex:
+                currentTurnIndex,
+
+            targetPoints:
+                targetEliminationPoints,
+
+            cardsPerPlayer:
+                cardsPerPlayer,
+
+            gameHistory:
+                gameHistory
+        };
+
+        document.getElementById(
+            'round-over-modal'
+        ).classList.add(
+            'hidden'
+        );
+
+        if (!isSoloMode) {
+
+            sendRealtimeMessage(
+                startPayload
+            );
+        }
+
+        renderGameBoard();
+
+        logTicker(
+            "New round started!"
+        );
+
+        checkBotTurn();
+    }
+
+    // ============================================================
+    // RENDER GAME BOARD
+    // ============================================================
+
+    function renderGameBoard() {
+
+        const topScoresContainer =
+            document.getElementById(
+                'top-scores-container'
+            );
+
+        topScoresContainer.innerHTML =
+            '';
+
+        players.forEach(p => {
+
+            let badge =
+                document.createElement(
+                    'div'
+                );
+
+            badge.className =
+                `flex items-center space-x-1 px-2 py-0.5 rounded bg-zinc-900 border ${
+                    p.eliminated
+                        ? 'border-zinc-900 opacity-50'
+                        : 'border-zinc-800'
+                } text-[11px]`;
+
+            badge.innerHTML =
+                `<span class="font-bold text-zinc-300">
+                    ${p.name}:
+                </span>
+
+                <span class="font-mono text-amber-300 font-bold">
+                    ${p.scores}
+                </span>`;
+
+            topScoresContainer.appendChild(
+                badge
+            );
+        });
+
+        const hudContainer =
+            document.getElementById(
+                'opponents-hud'
+            );
+
+        hudContainer.innerHTML =
+            '';
+
+        players.forEach(
+            (p, idx) => {
+
+                if (idx === myIndex)
+                    return;
+
+                let isTurn =
+                    (
+                        idx ===
+                        currentTurnIndex
+                    );
+
+                let div =
+                    document.createElement(
+                        'div'
+                    );
+
+                div.className =
+                    `p-2 rounded-lg border flex flex-col justify-between transition ${
+                        isTurn
+                            ? 'bg-zinc-900 border-amber-400'
+                            : 'bg-black border-zinc-800'
+                    } ${
+                        p.eliminated
+                            ? 'opacity-40'
+                            : ''
+                    }`;
+
+                let actionsHtml = '';
+
+                if (
+                    isHost &&
+                    !p.isHost &&
+                    p.id !== myId
+                ) {
+
+                    actionsHtml =
+                        `<div class="flex space-x-1 mt-1">
+                            <button onclick="confirmTransferHost('${p.id}', '${p.name.replace(/'/g, "\\'")}')"
+                                    class="bg-amber-600 text-white px-1.5 py-0.5 rounded text-[9px]">
+                                Host
+                            </button>
+
+                            <button onclick="confirmRemovePlayer('${p.id}', '${p.name.replace(/'/g, "\\'")}')"
+                                    class="bg-rose-600 text-white px-1.5 py-0.5 rounded text-[9px]">
+                                Remove
+                            </button>
+                        </div>`;
+                }
+
+                let statusText = '';
+
+                if (
+                    p.viewOnly === true
+                ) {
+
+                    statusText =
+                        `<span class="text-indigo-400 text-[8px]">
+                            VIEW
+                        </span>`;
+
+                } else if (
+                    p.rejoinPending === true
+                ) {
+
+                    statusText =
+                        `<span class="text-amber-400 text-[8px]">
+                            REJOIN
+                        </span>`;
+
+                } else if (
+                    p.connected === false
+                ) {
+
+                    statusText =
+                        `<span class="text-rose-400 text-[8px]">
+                            OFFLINE
+                        </span>`;
+                }
+
+                div.innerHTML =
+                    `<div class="flex justify-between items-center text-[10px]">
+                        <span class="font-bold truncate max-w-[65px]">
+                            ${p.name}
+                        </span>
+
+                        <span class="flex items-center gap-1">
+                            ${statusText}
+
+                            ${
+                                p.isHost
+                                    ? '<span class="text-[9px] text-amber-400">Host</span>'
+                                    : ''
+                            }
+                        </span>
+                    </div>
+
+                    <div class="flex justify-between items-center text-[10px] mt-1 text-zinc-400">
+                        <span>Cards:</span>
+                        <span class="font-bold text-white">
+                            ${p.hand ? p.hand.length : 0}
+                        </span>
+                    </div>
+
+                    ${actionsHtml}`;
+
+                hudContainer.appendChild(
+                    div
+                );
+            }
+        );
+
+        if (
+            discardPile.length > 0
+        ) {
+
+            let topCard =
+                discardPile[
+                    discardPile.length - 1
+                ];
+
+            let isRed =
+                ['♥', '♦'].includes(
+                    topCard.suit
+                );
+
+            let boardEl =
+                document.getElementById(
+                    'board-card-container'
+                );
+
+            boardEl.className =
+                `w-14 h-20 sm:w-18 sm:h-26 bg-white border-2 border-slate-300 rounded-lg shadow-lg flex flex-col justify-between p-1.5 font-bold transition ${
+                    isRed
+                        ? 'text-rose-600'
+                        : 'text-slate-900'
+                }`;
+
+            document.getElementById(
+                'board-val-tl'
+            ).innerText =
+                topCard.val;
+
+            document.getElementById(
+                'board-suit-mid'
+            ).innerText =
+                topCard.suit;
+
+            document.getElementById(
+                'board-val-br'
+            ).innerText =
+                topCard.val;
+        }
+
+        document.getElementById(
+            'deck-count'
+        ).innerText =
+            deck.length;
+
+        let me =
+            players[myIndex];
+
+        if (!me)
+            return;
+
+        const myHandContainer =
+            document.getElementById(
+                'my-hand-cards'
+            );
+
+        myHandContainer.innerHTML =
+            '';
+
+        let mySum =
+            calculateHandSum(
+                me.hand || []
+            );
+
+        document.getElementById(
+            'my-hand-sum'
+        ).innerText =
+            mySum;
+
+        let displayName =
+            me.name;
+
+        if (me.eliminated) {
+
+            displayName +=
+                ' (Out)';
+
+        } else if (
+            me.viewOnly === true
+        ) {
+
+            displayName +=
+                ' (View Only)';
+
+        } else if (
+            me.connected === false
+        ) {
+
+            displayName +=
+                ' (Offline)';
+        }
+
+        document.getElementById(
+            'my-display-name'
+        ).innerText =
+            displayName;
+
+        /*
+         * NEW:
+         * View-only player can see everything but
+         * cannot use Call Show.
+         */
+        let canShow =
+            (
+                currentTurnIndex ===
+                    myIndex &&
+                turnPhase ===
+                    'drop' &&
+                mySum <= 5 &&
+                !me.eliminated &&
+                me.connected !== false &&
+                me.viewOnly !== true &&
+                me.rejoinPending !== true
+            );
+
+        document.getElementById(
+            'call-show-btn'
+        ).disabled =
+            !canShow;
+
+        let activePlayer =
+            players[currentTurnIndex];
+
+        let isMyTurn =
+            (
+                currentTurnIndex ===
+                myIndex
+            );
+
+        /*
+         * View-only status message.
+         */
+        if (
+            me.viewOnly === true
+        ) {
+
+            document.getElementById(
+                'turn-announcement'
+            ).innerText =
+                "👁 VIEW ONLY";
+
+            document.getElementById(
+                'action-instruction'
+            ).innerText =
+                "You can watch the game, but cannot play.";
+
+        } else if (
+            me.connected === false
+        ) {
+
+            document.getElementById(
+                'turn-announcement'
+            ).innerText =
+                "OFFLINE";
+
+            document.getElementById(
+                'action-instruction'
+            ).innerText =
+                "Waiting for rejoin permission.";
+
+        } else {
+
+            document.getElementById(
+                'turn-announcement'
+            ).innerText =
+                isMyTurn
+                    ? "👉 YOUR TURN!"
+                    : `Turn: ${activePlayer ? activePlayer.name : 'Waiting'}`;
+
+            document.getElementById(
+                'action-instruction'
+            ).innerText =
+                isMyTurn
+                    ? (
+                        turnPhase === 'drop'
+                            ? "Select card to drop."
+                            : "Click stock to draw."
+                    )
+                    : "Waiting...";
+        }
+
+        /*
+         * NEW:
+         * Disable stock deck for view-only users.
+         */
+        const stockDeck =
+            document.getElementById(
+                'stock-deck'
+            );
+
+        if (stockDeck) {
+
+            if (
+                me.viewOnly === true ||
+                me.connected === false ||
+                !isMyTurn
+            ) {
+
+                stockDeck.classList.add(
+                    'opacity-60',
+                    'cursor-not-allowed'
+                );
+
+            } else {
+
+                stockDeck.classList.remove(
+                    'opacity-60',
+                    'cursor-not-allowed'
+                );
+            }
+        }
+
+        me.hand.forEach(
+            card => {
+
+                let isRed =
+                    ['♥', '♦'].includes(
+                        card.suit
+                    );
+
+                let cardEl =
+                    document.createElement(
+                        'div'
+                    );
+
+                cardEl.className =
+                    `w-12 h-20 sm:w-16 sm:h-24 bg-white border-2 border-slate-300 rounded-lg shadow-md flex flex-col justify-between p-1 sm:p-1.5 font-bold cursor-pointer hover:-translate-y-1 transition transform select-none shrink-0 ${
+                        isRed
+                            ? 'text-rose-600'
+                            : 'text-slate-900'
+                    } ${
+                        !isMyTurn ||
+                        me.eliminated ||
+                        me.viewOnly === true ||
+                        me.connected === false
+                            ? 'opacity-80 cursor-not-allowed'
+                            : ''
+                    }`;
+
+                cardEl.innerHTML =
+                    `<div class="text-[10px] sm:text-xs">
+                        ${card.val}
+                    </div>
+
+                    <div class="text-sm sm:text-lg self-center">
+                        ${card.suit}
+                    </div>
+
+                    <div class="text-[10px] sm:text-xs self-end rotate-180">
+                        ${card.val}
+                    </div>`;
+
+                /*
+                 * NEW:
+                 * View-only cards never receive click handlers.
+                 */
+                if (
+                    isMyTurn &&
+                    !me.eliminated &&
+                    me.viewOnly !== true &&
+                    me.connected !== false
+                ) {
+
+                    cardEl.onclick =
+                        () =>
+                            handleCardClick(
+                                card.uid
+                            );
+                }
+
+                myHandContainer.appendChild(
+                    cardEl
+                );
+            }
+        );
+    }
+
+    // ============================================================
+    // SCOREBOARD
+    // ============================================================
+
+    function updateScoreboardTable() {
+
+        const tbody =
+            document.getElementById(
+                'scoreboard-table-body'
+            );
+
+        tbody.innerHTML =
+            '';
+
+        players.forEach(p => {
+
+            let tr =
+                document.createElement(
+                    'tr'
+                );
+
+            let status =
+                p.eliminated
+                    ? 'Eliminated'
+                    : p.viewOnly
+                        ? 'View Only'
+                        : p.connected === false
+                            ? 'Offline'
+                            : 'Active';
+
+            let statusClass =
+                p.eliminated
+                    ? 'bg-rose-500/20 text-rose-400'
+                    : p.viewOnly
+                        ? 'bg-indigo-500/20 text-indigo-400'
+                        : p.connected === false
+                            ? 'bg-zinc-500/20 text-zinc-400'
+                            : 'bg-emerald-500/20 text-emerald-400';
+
+            tr.innerHTML =
+                `<td class="py-2 font-medium">
+                    ${p.name}
+                    ${
+                        p.isHost
+                            ? '<span class="text-[10px] text-amber-400 font-normal">(Host)</span>'
+                            : ''
+                    }
+                </td>
+
+                <td class="py-2 text-right font-mono font-bold">
+                    ${p.scores} / ${targetEliminationPoints}
+                </td>
+
+                <td class="py-2 text-right text-[11px]">
+                    <span class="px-2 py-0.5 rounded ${statusClass}">
+                        ${status}
+                    </span>
+                </td>`;
+
+            tbody.appendChild(
+                tr
+            );
+        });
+    }
+
+    // ============================================================
+    // HISTORY
+    // ============================================================
+
+    function updateHistoryContainer() {
+
+        const container =
+            document.getElementById(
+                'history-container'
+            );
+
+        if (!container)
+            return;
+
+        if (
+            !gameHistory ||
+            gameHistory.length === 0
+        ) {
+
+            container.innerHTML =
+                `<p class="text-zinc-500 italic text-center py-4">
+                    No completed rounds yet.
+                </p>`;
+
+            return;
+        }
+
+        container.innerHTML =
+            '';
+
+        gameHistory.forEach(
+            round => {
+
+                let div =
+                    document.createElement(
+                        'div'
+                    );
+
+                div.className =
+                    'bg-zinc-900 border border-zinc-800 p-3 rounded-xl space-y-1.5';
+
+                let detailsHtml =
+                    '';
+
+                round.details.forEach(
+                    d => {
+
+                        detailsHtml +=
+                            `<div class="flex justify-between text-zinc-300">
+                                <span>
+                                    ${d.name}
+                                    (Sum: ${d.sum})
+                                </span>
+
+                                <span class="font-mono text-amber-400">
+                                    +${d.pointsAdded} pts
+                                </span>
+                            </div>`;
+                    }
+                );
+
+                div.innerHTML =
+                    `<div class="flex justify-between items-center font-bold text-emerald-300 border-b border-zinc-800 pb-1">
+                        <span>
+                            Round ${round.roundNumber}
+                            (${round.callerName}'s Show)
+                        </span>
+
+                        <span class="text-[10px] text-zinc-400 font-normal">
+                            ${round.outcome}
+                        </span>
+                    </div>
+
+                    <div class="space-y-1 text-xs pt-1">
+                        ${detailsHtml}
+                    </div>`;
+
+                container.appendChild(
+                    div
+                );
+            }
+        );
+    }
+</script>
+
+</body>
+</html>
