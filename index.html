@@ -3,7 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Least Count</title>
+    <title>Least Count Game - 7 Cards Game | Least Count Card Game</title>
+    <meta name="description" content="Play Least Count, the popular 7 cards game and lowest count card game online. Multiplayer Least Count card game with elimination, rooms, scores and game history.">
+    <meta name="keywords" content="least count, leastcount, least count game, least count card game, leastcount game, cards game, card game, 7 cards game, 7 cards card game, eliminate game, eliminate card game, lowest count, lowest count game, lowest score card game, least count multiplayer, least count online, least count game online">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="Least Count Game - 7 Cards Game">
+    <meta property="og:description" content="Play Least Count, a 7 cards multiplayer card game with elimination and lowest-count scoring.">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="https://img.magnific.com/premium-photo/png-playing-card-cards-opportunity-recreation_53876-884775.jpg?semt=ais_hybrid&w=740&q=80">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="Least Count Game - 7 Cards Game">
+    <meta name="twitter:description" content="Play the Least Count card game online with 7 cards, multiplayer rooms and elimination.">
+    <meta name="twitter:image" content="https://img.magnific.com/premium-photo/png-playing-card-cards-opportunity-recreation_53876-884775.jpg?semt=ais_hybrid&w=740&q=80">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
@@ -20,6 +31,12 @@
             overflow: hidden;
             margin: 0;
             padding: 0;
+        }
+
+        /* Disable browser overscroll / pull-to-refresh. Normal in-app scrolling remains enabled. */
+        html, body {
+            overscroll-behavior: none;
+            overscroll-behavior-y: none;
         }
 
         .card-shadow {
@@ -44,16 +61,94 @@
 
 <body class="bg-black h-[100dvh] w-screen text-white font-sans flex flex-col justify-between">
 
-    <!-- PULL TO REFRESH INDICATOR -->
-    <div id="ptr-indicator"
-         class="absolute top-0 left-0 right-0 h-12 bg-zinc-900 border-b border-zinc-800 flex items-center justify-center text-xs text-emerald-400 font-semibold z-50 transform -translate-y-full transition-transform duration-200">
-        <span id="ptr-text">Pull down to refresh...</span>
+    <!-- AUTHENTICATION SCREEN -->
+    <div id="auth-screen"
+         class="fixed inset-0 z-[200] bg-black flex items-center justify-center p-4 overflow-y-auto">
+        <div class="w-full max-w-sm bg-black border border-zinc-800 rounded-2xl p-5 shadow-2xl">
+            <div class="text-center mb-5">
+                <div class="text-2xl font-black text-emerald-300">LEAST COUNT</div>
+                <div class="text-xs text-zinc-500 mt-1">Create an account or login to play</div>
+            </div>
+
+            <div class="flex bg-zinc-900 rounded-xl p-1 mb-4">
+                <button id="auth-login-tab" onclick="switchAuthTab('login')"
+                        class="flex-1 py-2 rounded-lg bg-emerald-500 text-black text-xs font-bold">
+                    Login
+                </button>
+                <button id="auth-register-tab" onclick="switchAuthTab('register')"
+                        class="flex-1 py-2 rounded-lg text-zinc-400 text-xs font-bold">
+                    Register
+                </button>
+            </div>
+
+            <div id="auth-login-form" class="space-y-3">
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">First Name</label>
+                    <input id="login-firstname" type="text" maxlength="30" autocomplete="username"
+                           class="w-full px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white text-sm"
+                           placeholder="Enter first name">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">Password</label>
+                    <input id="login-password" type="password" maxlength="72" autocomplete="current-password"
+                           class="w-full px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white text-sm"
+                           placeholder="Enter password">
+                </div>
+                <button id="login-btn" onclick="loginUser()"
+                        class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-sm">
+                    Login
+                </button>
+            </div>
+
+            <div id="auth-register-form" class="space-y-3 hidden">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">First Name</label>
+                        <input id="register-firstname" type="text" maxlength="30" autocomplete="given-name"
+                               class="w-full px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white text-sm"
+                               placeholder="First name">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">Last Name</label>
+                        <input id="register-lastname" type="text" maxlength="30" autocomplete="family-name"
+                               class="w-full px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white text-sm"
+                               placeholder="Last name">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">Password</label>
+                    <input id="register-password" type="password" maxlength="72" autocomplete="new-password"
+                           class="w-full px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white text-sm"
+                           placeholder="Minimum 6 characters">
+                </div>
+                <div>
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">Confirm Password</label>
+                    <input id="register-password-confirm" type="password" maxlength="72" autocomplete="new-password"
+                           class="w-full px-3 py-2.5 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white text-sm"
+                           placeholder="Repeat password">
+                </div>
+                <button id="register-btn" onclick="registerUser()"
+                        class="w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-xl text-sm">
+                    Create Account
+                </button>
+            </div>
+
+            <p id="auth-message" class="text-xs text-center mt-3 min-h-[18px]"></p>
+            <p class="text-[10px] text-zinc-600 text-center mt-3">
+                Your password is handled by Supabase Authentication and is never stored in the game tables.
+            </p>
+        </div>
     </div>
+
 
     <!-- TOP BAR / HEADER -->
     <header class="p-2 sm:p-3 bg-black flex flex-row justify-between items-center border-b border-zinc-800 gap-2 shrink-0">
         <div class="flex items-center space-x-2">
-            <span class="text-base sm:text-xl font-black tracking-wider text-emerald-400">LEAST COUNT</span>
+            <img src="https://img.magnific.com/premium-photo/png-playing-card-cards-opportunity-recreation_53876-884775.jpg?semt=ais_hybrid&w=740&q=80"
+                 alt="Least Count 7 Cards Game playing cards logo"
+                 class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover border border-emerald-500/30"
+                 loading="eager">
+            <span class="text-xs sm:text-sm font-black tracking-wider text-emerald-400">LEAST COUNT</span>
 
             <span id="room-badge"
                   class="text-[10px] sm:text-xs bg-zinc-900 px-2 py-0.5 rounded text-emerald-300 hidden">
@@ -63,14 +158,38 @@
         </div>
 
         <div class="flex items-center space-x-2">
+            <div class="flex items-center gap-1.5">
+                <div id="bot-wallet-card"
+                     title="Bot game wallet"
+                     class="flex items-center gap-1 bg-zinc-900 border border-indigo-500/30 px-1.5 py-1 rounded-lg">
+                    <span class="text-[9px] text-indigo-300 font-bold">BOT</span>
+                    <span id="bot-wallet-balance" class="text-[10px] text-indigo-200 font-black tabular-nums">0</span>
+                </div>
+
+                <div id="real-wallet-card"
+                     title="Real multiplayer game wallet"
+                     class="flex items-center gap-1 bg-zinc-900 border border-emerald-500/30 px-1.5 py-1 rounded-lg">
+                    <span class="text-[9px] text-emerald-300 font-bold">REAL</span>
+                    <span id="real-wallet-balance" class="text-[10px] text-emerald-200 font-black tabular-nums">0</span>
+                </div>
+            </div>
+
             <div id="game-status-banner"
                  class="text-[11px] font-semibold bg-zinc-900 px-2.5 py-0.5 rounded-full border border-zinc-800 hidden">
                 Waiting...
             </div>
 
-            <button onclick="confirmExitGame()"
-                    class="bg-rose-600/85 hover:bg-rose-600 text-white px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-rose-700/50">
-                Exit Game
+            <span id="logged-in-name"
+                  class="hidden text-[10px] text-zinc-400 max-w-[90px] truncate"></span>
+            <button id="logout-btn"
+                    onclick="logoutUser()"
+                    class="hidden bg-zinc-800 hover:bg-zinc-700 text-rose-300 px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-zinc-700">
+                Logout
+            </button>
+            <button id="header-action-btn"
+                    onclick="refreshLobbyApp()"
+                    class="bg-emerald-600/85 hover:bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-emerald-700/50">
+                Refresh
             </button>
         </div>
     </header>
@@ -133,8 +252,8 @@
 
                         <select id="cards-count-select"
                                 class="w-full px-2 py-2 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white font-medium text-xs">
-                            <option value="5">5 Cards</option>
-                            <option value="7" selected>7 Cards</option>
+                            <option value="5" selected>5 Cards</option>
+                            <option value="7">7 Cards</option>
                             <option value="9">9 Cards</option>
                         </select>
                     </div>
@@ -146,12 +265,23 @@
 
                         <select id="target-points-select"
                                 class="w-full px-2 py-2 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white font-medium text-xs">
-                            <option value="50">50 Pts</option>
+                            <option value="1">Single Game</option>
+                            <option value="10">10 Pts</option>
+                            <option value="25">25 Pts</option>
+							<option value="50" selected>50 Pts</option>
                             <option value="75">75 Pts</option>
-                            <option value="100" selected>100 Pts</option>
+                            <option value="100">100 Pts</option>
                             <option value="150">150 Pts</option>
                         </select>
                     </div>
+                </div>
+
+                <div class="mt-2">
+                    <label class="block text-[10px] uppercase tracking-wider text-zinc-400 mb-1 font-semibold">Joker Card</label>
+                    <select id="joker-option-select" class="w-full px-2 py-2 rounded-xl bg-zinc-900 border border-zinc-800 focus:outline-none focus:border-emerald-500 text-white font-medium text-xs">
+                        <option value="no" selected>No Joker</option>
+                        <option value="yes">Include 1 Joker (0 Points)</option>
+                    </select>
                 </div>
             </div>
 
@@ -244,6 +374,8 @@
                     <span id="display-cards-count">7</span>
                     • Target:
                     <span id="display-target-pts">100</span> pts
+                    • Joker:
+                    <span id="display-joker-option">No</span>
                 </h3>
 
                 <ul id="player-list-ul"
@@ -391,11 +523,14 @@
     <!-- FOOTER -->
     <footer class="p-2 sm:p-3 bg-black border-t border-zinc-800 flex justify-between items-center text-[11px] px-4 shrink-0">
 
-     
+        <div class="text-zinc-400 truncate max-w-[50vw]"
+             id="activity-log-ticker">
+            Ready
+        </div>
 
         <div class="flex space-x-2">
-            <button onclick="toggleHistoryModal(true)"
-                    class="bg-zinc-900 hover:bg-zinc-800 text-zinc-200 px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-zinc-800">
+            <button id="history-footer-btn" onclick="toggleHistoryModal(true)"
+                    class="game-only-footer-control hidden bg-zinc-900 hover:bg-zinc-800 text-zinc-200 px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-zinc-800">
                 History
             </button>
 
@@ -404,8 +539,8 @@
                 Game Instructions
             </button>
 
-            <button onclick="toggleScoreboardModal(true)"
-                    class="bg-zinc-900 hover:bg-zinc-800 text-zinc-200 px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-zinc-800">
+            <button id="scores-footer-btn" onclick="toggleScoreboardModal(true)"
+                    class="game-only-footer-control hidden bg-zinc-900 hover:bg-zinc-800 text-zinc-200 px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-zinc-800">
                 Scores
             </button>
 
@@ -664,7 +799,7 @@
             `Host: ${hostName}\n` +
             `Game Code: ${roomCode}\n` +
             `Players: ${safePlayers.map(p => p.name).join(', ')}\n` +
-            `Settings: ${maxPlayersLimit} players, ${cardsPerPlayer} cards/player, ${targetEliminationPoints} elimination points\n\n`;
+            `Settings: ${maxPlayersLimit} players, ${cardsPerPlayer} cards/player, ${targetEliminationPoints} elimination points, Joker: ${includeJoker ? 'Yes (0 points)' : 'No'}\n\n`;
 
         if (Array.isArray(gameHistory) && gameHistory.length) {
             gameHistory.forEach(round => {
@@ -774,15 +909,53 @@
     }
 
     const nicknameInput = document.getElementById('nickname-input');
-    try { nicknameInput.value = localStorage.getItem('leastCountNickname') || ''; } catch (e) {}
-    nicknameInput.addEventListener('input', () => { try { localStorage.setItem('leastCountNickname', nicknameInput.value); } catch (e) {} });
 
     const supabaseClient = supabase.createClient(
         SUPABASE_BASE_URL,
-        SUPABASE_APIKEY
+        SUPABASE_APIKEY,
+        {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true
+            }
+        }
     );
 
+    // Current authenticated player. Supabase Auth keeps the session;
+    // coin balances are never stored in browser localStorage.
+    let currentUser = null;
+    let currentProfile = null;
+
     let roomChannel = null;
+
+    // Chat is strictly scoped to the currently active room.
+    // This prevents messages from a previous room/session from
+    // appearing when the user enters a different room.
+    let activeChatRoomKey = '';
+
+    // Tournament winner popup state. Reset only when entering a different room.
+    let tournamentWinnerRoomKey = '';
+    let tournamentWinnerShown = false;
+
+    function resetTournamentWinnerState(roomKey = '') {
+        const normalizedRoomKey = String(roomKey || '').trim().toUpperCase();
+        if (tournamentWinnerRoomKey === normalizedRoomKey) return;
+        tournamentWinnerRoomKey = normalizedRoomKey;
+        tournamentWinnerShown = false;
+    }
+
+    function showTournamentWinnerPopup(winnerName, eventRoomCode = '') {
+        const eventRoom = String(eventRoomCode || '').trim().toUpperCase();
+        const currentRoom = String(roomCode || '').trim().toUpperCase();
+
+        if (!eventRoom || !currentRoom || eventRoom !== currentRoom) return false;
+        if (tournamentWinnerShown) return false;
+
+        tournamentWinnerShown = true;
+        alert(`Tournament Over! Winner is ${winnerName || 'Nobody'}!`);
+        return true;
+    }
 
     let isHost = false;
     let isSoloMode = false;
@@ -815,12 +988,450 @@
     let maxPlayersLimit = 4;
     let cardsPerPlayer = 7;
     let targetEliminationPoints = 100;
+    let includeJoker = false;
     let roomCode = '';
 
     let players = [];
     let myIndex = 0;
     let gameHistory = [];
     let roundCounter = 0;
+
+    // ============================================================
+    // SUPABASE USER WALLETS
+    // BOT = games against computer players
+    // REAL = online multiplayer games
+    // Balances and settlement records are stored in Supabase.
+    // ============================================================
+    const WIN_REWARD_PER_OPPONENT = 100;
+    const LOSS_PENALTY = 100;
+
+    let botWallet = 0;
+    let realWallet = 0;
+    let walletGameId = '';
+    let gameOpponentCount = 1;
+
+    function renderWallets() {
+        const botEl = document.getElementById('bot-wallet-balance');
+        const realEl = document.getElementById('real-wallet-balance');
+
+        if (botEl)
+            botEl.innerText = String(Math.trunc(Number(botWallet) || 0));
+
+        if (realEl)
+            realEl.innerText = String(Math.trunc(Number(realWallet) || 0));
+
+        if (botEl)
+            botEl.className =
+                `text-[10px] font-black tabular-nums ${
+                    botWallet < 0 ? 'text-rose-300' : 'text-indigo-200'
+                }`;
+
+        if (realEl)
+            realEl.className =
+                `text-[10px] font-black tabular-nums ${
+                    realWallet < 0 ? 'text-rose-300' : 'text-emerald-200'
+                }`;
+    }
+
+    async function loadWallets() {
+        if (!currentUser) {
+            botWallet = 0;
+            realWallet = 0;
+            renderWallets();
+            return;
+        }
+
+        try {
+            const { data, error } = await supabaseClient
+                .from('player_wallets')
+                .select('bot_coins, real_coins')
+                .eq('user_id', currentUser.id)
+                .single();
+
+            if (error) throw error;
+
+            botWallet = Number(data?.bot_coins || 0);
+            realWallet = Number(data?.real_coins || 0);
+            renderWallets();
+        } catch (error) {
+            console.error('Wallet load failed:', error);
+            logTicker('Unable to load wallet balances.');
+        }
+    }
+
+    function setWalletGameId() {
+        walletGameId =
+            String(roomCode || '') + '-' +
+            Date.now().toString(36) + '-' +
+            Math.random().toString(36).slice(2, 8);
+    }
+
+    async function settleWalletForCompletedGame(winnerName, opponentCount, forceType = '') {
+        if (!currentUser) return;
+        if (!walletGameId && roomCode) walletGameId = roomCode;
+        if (!walletGameId) return;
+
+        const me = String(myName || '').trim();
+        const winner = String(winnerName || '').trim();
+
+        if (!me || !winner || winner === 'Nobody') return;
+
+        const opponents = Math.max(1, Math.trunc(Number(opponentCount) || 1));
+
+        const useBotWallet =
+            forceType === 'bot' ||
+            (forceType !== 'real' && isSoloMode);
+
+        const won = me === winner;
+        const delta = won
+            ? WIN_REWARD_PER_OPPONENT * opponents
+            : -LOSS_PENALTY;
+
+        try {
+            const { data, error } = await supabaseClient.rpc(
+                'settle_game_wallet',
+                {
+                    p_game_id: String(walletGameId),
+                    p_wallet_type: useBotWallet ? 'bot' : 'real',
+                    p_delta: Math.trunc(delta),
+                    p_game_code: String(roomCode || ''),
+                    p_result: won ? 'win' : 'loss'
+                }
+            );
+
+            if (error) throw error;
+
+            const result = Array.isArray(data) ? data[0] : data;
+
+            if (result) {
+                botWallet = Number(result.bot_coins ?? botWallet);
+                realWallet = Number(result.real_coins ?? realWallet);
+            } else {
+                await loadWallets();
+            }
+
+            renderWallets();
+
+            const walletName = useBotWallet ? 'BOT wallet' : 'REAL wallet';
+            const amountText = delta >= 0 ? `+${delta}` : `${delta}`;
+
+            logTicker(
+                `${won ? 'WIN' : 'LOSS'}: ${amountText} coins → ${walletName}`
+            );
+        } catch (error) {
+            console.error('Wallet settlement failed:', error);
+            logTicker('Coin settlement failed. Please refresh your wallet.');
+        }
+    }
+
+
+    // ============================================================
+    // AUTHENTICATION
+    // ============================================================
+
+    function normalizeFirstName(value) {
+        return String(value || '').trim().replace(/\s+/g, ' ');
+    }
+
+    function authEmailFromFirstName(firstName) {
+        // The user logs in with first name. Supabase Auth still receives
+        // an internal email identifier; users never need to enter it.
+        const normalized = normalizeFirstName(firstName)
+            .toLowerCase()
+            .replace(/[^a-z0-9]/g, '');
+
+        return `${normalized}@leastcountgame.local`;
+    }
+
+    function setAuthMessage(message, isError = true) {
+        const el = document.getElementById('auth-message');
+        if (!el) return;
+        el.innerText = message || '';
+        el.className =
+            `text-xs text-center mt-3 min-h-[18px] ${
+                isError ? 'text-rose-400' : 'text-emerald-400'
+            }`;
+    }
+
+    function switchAuthTab(tab) {
+        const loginForm = document.getElementById('auth-login-form');
+        const registerForm = document.getElementById('auth-register-form');
+        const loginTab = document.getElementById('auth-login-tab');
+        const registerTab = document.getElementById('auth-register-tab');
+
+        const login = tab === 'login';
+
+        loginForm.classList.toggle('hidden', !login);
+        registerForm.classList.toggle('hidden', login);
+
+        loginTab.className = login
+            ? 'flex-1 py-2 rounded-lg bg-emerald-500 text-black text-xs font-bold'
+            : 'flex-1 py-2 rounded-lg text-zinc-400 text-xs font-bold';
+
+        registerTab.className = !login
+            ? 'flex-1 py-2 rounded-lg bg-emerald-500 text-black text-xs font-bold'
+            : 'flex-1 py-2 rounded-lg text-zinc-400 text-xs font-bold';
+
+        setAuthMessage('', false);
+    }
+
+    function showAuthScreen(show = true) {
+        document.getElementById('auth-screen')?.classList.toggle('hidden', !show);
+    }
+
+    function setAuthButtonsBusy(busy, buttonId) {
+        const ids = ['login-btn', 'register-btn'];
+        ids.forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.disabled = busy;
+        });
+
+        const btn = document.getElementById(buttonId);
+        if (btn) btn.classList.toggle('opacity-50', busy);
+    }
+
+    async function registerUser() {
+        const firstName = normalizeFirstName(
+            document.getElementById('register-firstname').value
+        );
+        const lastName = normalizeFirstName(
+            document.getElementById('register-lastname').value
+        );
+        const password = document.getElementById('register-password').value;
+        const confirm = document.getElementById('register-password-confirm').value;
+
+        if (!firstName || !lastName) {
+            setAuthMessage('First name and last name are required.');
+            return;
+        }
+
+        if (!/^[A-Za-z][A-Za-z0-9 _-]{1,29}$/.test(firstName)) {
+            setAuthMessage('First name must be 2-30 characters and start with a letter.');
+            return;
+        }
+
+        if (password.length < 6) {
+            setAuthMessage('Password must contain at least 6 characters.');
+            return;
+        }
+
+        if (password !== confirm) {
+            setAuthMessage('Passwords do not match.');
+            return;
+        }
+
+        setAuthButtonsBusy(true, 'register-btn');
+        setAuthMessage('Creating account...', false);
+
+        try {
+            const email = authEmailFromFirstName(firstName);
+
+            const { data, error } = await supabaseClient.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        first_name: firstName,
+                        last_name: lastName
+                    }
+                }
+            });
+
+            if (error) throw error;
+
+            // If email confirmation is enabled in the Supabase project,
+            // signUp returns no session. This game intentionally uses
+            // first-name login, so email confirmation should be disabled.
+            if (!data.session) {
+                setAuthMessage(
+                    'Account created, but Supabase email confirmation is enabled. Disable email confirmation in Supabase Auth settings, then login.',
+                    true
+                );
+                switchAuthTab('login');
+                document.getElementById('login-firstname').value = firstName;
+                return;
+            }
+
+            await handleAuthenticatedUser(data.user);
+            setAuthMessage('Account created successfully.', false);
+        } catch (error) {
+            console.error('Registration failed:', error);
+            const msg = String(error?.message || 'Registration failed.');
+            if (msg.toLowerCase().includes('already registered')) {
+                setAuthMessage('That first name is already registered. Please choose another.');
+            } else {
+                setAuthMessage(msg);
+            }
+        } finally {
+            setAuthButtonsBusy(false, 'register-btn');
+        }
+    }
+
+    async function loginUser() {
+        const firstName = normalizeFirstName(
+            document.getElementById('login-firstname').value
+        );
+        const password = document.getElementById('login-password').value;
+
+        if (!firstName || !password) {
+            setAuthMessage('Enter your first name and password.');
+            return;
+        }
+
+        setAuthButtonsBusy(true, 'login-btn');
+        setAuthMessage('Logging in...', false);
+
+        try {
+            const email = authEmailFromFirstName(firstName);
+
+            const { data, error } = await supabaseClient.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) throw error;
+
+            await handleAuthenticatedUser(data.user);
+        } catch (error) {
+            console.error('Login failed:', error);
+            setAuthMessage('Invalid first name or password.');
+        } finally {
+            setAuthButtonsBusy(false, 'login-btn');
+        }
+    }
+
+    async function handleAuthenticatedUser(user) {
+        currentUser = user;
+
+        let profile = null;
+        const { data: existingProfile, error: profileError } =
+            await supabaseClient
+                .from('player_profiles')
+                .select('id, first_name, last_name')
+                .eq('id', user.id)
+                .maybeSingle();
+
+        if (profileError) {
+            console.error('Profile read failed:', profileError);
+        } else {
+            profile = existingProfile;
+        }
+
+        // If the profile row does not exist (for an older account),
+        // create it from Auth metadata.
+        if (!profile) {
+            const firstName =
+                normalizeFirstName(user.user_metadata?.first_name) ||
+                normalizeFirstName((user.email || '').split('@')[0]) ||
+                'Player';
+            const lastName =
+                normalizeFirstName(user.user_metadata?.last_name) || '';
+
+            const { data: createdProfile, error: createProfileError } =
+                await supabaseClient
+                    .from('player_profiles')
+                    .insert({
+                        id: user.id,
+                        first_name: firstName,
+                        last_name: lastName
+                    })
+                    .select('id, first_name, last_name')
+                    .single();
+
+            if (createProfileError) {
+                console.error('Profile creation failed:', createProfileError);
+                throw createProfileError;
+            }
+
+            profile = createdProfile;
+        }
+
+        currentProfile = profile;
+
+        myName = profile.first_name;
+        nicknameInput.value = profile.first_name;
+        nicknameInput.readOnly = true;
+
+        const loggedName = document.getElementById('logged-in-name');
+        if (loggedName) {
+            loggedName.innerText =
+                `${profile.first_name}${profile.last_name ? ' ' + profile.last_name : ''}`;
+            loggedName.classList.remove('hidden');
+        }
+
+        document.getElementById('logout-btn')?.classList.remove('hidden');
+        showAuthScreen(false);
+
+        await loadWallets();
+        refreshPublicRoomsList();
+        logTicker(`Welcome, ${profile.first_name}!`);
+    }
+
+    async function initializeAuthentication() {
+        const { data: { session } } =
+            await supabaseClient.auth.getSession();
+
+        if (session?.user) {
+            try {
+                await handleAuthenticatedUser(session.user);
+                return;
+            } catch (error) {
+                console.error('Session initialization failed:', error);
+            }
+        }
+
+        currentUser = null;
+        currentProfile = null;
+        showAuthScreen(true);
+        renderWallets();
+    }
+
+    async function logoutUser() {
+        try {
+            // Do not allow an active game session to keep using an old auth
+            // object after logout.
+            if (roomChannel) {
+                await supabaseClient.removeChannel(roomChannel);
+                roomChannel = null;
+            }
+
+            await supabaseClient.auth.signOut();
+        } catch (error) {
+            console.error('Logout failed:', error);
+        }
+
+        currentUser = null;
+        currentProfile = null;
+        myName = '';
+        botWallet = 0;
+        realWallet = 0;
+        roomCode = '';
+        players = [];
+        renderWallets();
+
+        const loggedName = document.getElementById('logged-in-name');
+        if (loggedName) {
+            loggedName.innerText = '';
+            loggedName.classList.add('hidden');
+        }
+
+        document.getElementById('logout-btn')?.classList.add('hidden');
+
+        document.getElementById('game-board-screen')?.classList.add('hidden');
+        document.getElementById('waiting-screen')?.classList.add('hidden');
+        document.getElementById('lobby-screen')?.classList.remove('hidden');
+
+        showAuthScreen(true);
+        switchAuthTab('login');
+        setAuthMessage('Logged out.', false);
+    }
+
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (event === 'SIGNED_OUT') {
+            currentUser = null;
+            currentProfile = null;
+        }
+    });
 
     let deck = [];
     let discardPile = [];
@@ -892,6 +1503,12 @@
     }
 
     function initRealtimeChannel(code) {
+        resetTournamentWinnerState(code);
+
+        // A new room gets a completely fresh chat context.
+        // If this is only a reconnect to the same room, keep its current chat.
+        resetRoomChatState(code);
+
         if (roomChannel) {
             supabaseClient.removeChannel(roomChannel);
         }
@@ -936,95 +1553,9 @@
             });
     }
 
-    // ============================================================
-    // PULL TO REFRESH
-    // ============================================================
-
-    let touchStartY = 0;
-    let isPulling = false;
-
-    const ptrIndicator =
-        document.getElementById('ptr-indicator');
-
-    const ptrText =
-        document.getElementById('ptr-text');
-
-    window.addEventListener(
-        'touchstart',
-        (e) => {
-
-            let lobbyScreen =
-                document.getElementById('lobby-screen');
-
-            if (
-                lobbyScreen &&
-                !lobbyScreen.classList.contains('hidden') &&
-                lobbyScreen.scrollTop <= 5
-            ) {
-                touchStartY = e.touches[0].clientY;
-                isPulling = true;
-            }
-        },
-        { passive: true }
-    );
-
-    window.addEventListener(
-        'touchmove',
-        (e) => {
-
-            if (!isPulling) return;
-
-            let touchY = e.touches[0].clientY;
-            let diff = touchY - touchStartY;
-
-            if (diff > 0 && diff < 160) {
-
-                ptrIndicator.style.transform =
-                    `translateY(${diff - 48}px)`;
-
-                if (diff > 75) {
-                    ptrText.innerText =
-                        "Release to refresh!";
-                } else {
-                    ptrText.innerText =
-                        "Pull down to refresh...";
-                }
-            }
-        },
-        { passive: true }
-    );
-
-    window.addEventListener(
-        'touchend',
-        (e) => {
-
-            if (!isPulling) return;
-
-            isPulling = false;
-
-            let touchY =
-                e.changedTouches[0].clientY;
-
-            let diff =
-                touchY - touchStartY;
-
-            ptrIndicator.style.transform =
-                'translateY(-100%)';
-
-            if (diff > 75) {
-
-                ptrText.innerText =
-                    "Refreshing...";
-
-                setTimeout(
-                    () => location.reload(),
-                    200
-                );
-            }
-        }
-    );
 
     const cardValueWeight = {
+        'JOKER': 0,
         'A': 1,
         '2': 2,
         '3': 3,
@@ -1327,7 +1858,7 @@
     window.addEventListener(
         'load',
         () => {
-            refreshPublicRoomsList();
+            initializeAuthentication();
         }
     );
 
@@ -1585,6 +2116,121 @@
     }
 
     // ============================================================
+    // RETURN TO LOBBY WITHOUT RELOADING THE PAGE
+    // ============================================================
+
+    async function returnToLobbyWithoutReload(message = '') {
+        try {
+            if (roomChannel) {
+                await supabaseClient.removeChannel(roomChannel);
+            }
+        } catch (e) {}
+
+        roomChannel = null;
+
+        try {
+            localStorage.removeItem('leastCountGameSession');
+        } catch (e) {}
+
+        updateGameOnlyFooterControls(false);
+
+        isHost = false;
+        isSoloMode = false;
+        myId = '';
+        roomCode = '';
+        resetRoomChatState('');
+        resetTournamentWinnerState('');
+        players = [];
+        myIndex = 0;
+        gameHistory = [];
+        roundCounter = 0;
+        deck = [];
+        discardPile = [];
+        currentTurnIndex = 0;
+        roundActive = false;
+        turnPhase = 'drop';
+        pendingRejoinRequest = null;
+
+        document.getElementById('lobby-screen').classList.remove('hidden');
+        setLobbyDefaultSettings();
+        setHeaderAction(true);
+        document.getElementById('waiting-screen').classList.add('hidden');
+        document.getElementById('game-board-screen').classList.add('hidden');
+        document.getElementById('room-badge').classList.add('hidden');
+        document.getElementById('sticky-scores-wrapper').classList.add('hidden');
+        document.getElementById('game-status-banner').classList.add('hidden');
+        document.getElementById('rejoin-request-modal').classList.add('hidden');
+        document.getElementById('history-modal').classList.add('hidden');
+        document.getElementById('scoreboard-modal').classList.add('hidden');
+        document.getElementById('round-over-modal').classList.add('hidden');
+        document.getElementById('database-history-modal')?.classList.add('hidden');
+        document.getElementById('lobby-error').classList.add('hidden');
+
+        logTicker(message || 'Ready');
+        refreshPublicRoomsList();
+    }
+
+    // ============================================================
+    // HEADER ACTION + LOBBY DEFAULT SETTINGS
+    // ============================================================
+
+    function setHeaderAction(isLobby) {
+        const btn = document.getElementById('header-action-btn');
+        if (!btn) return;
+
+        if (isLobby) {
+            btn.innerText = 'Refresh';
+            btn.onclick = refreshLobbyApp;
+            btn.className =
+                'bg-emerald-600/85 hover:bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-emerald-700/50';
+            btn.title = 'Refresh the app / website';
+        } else {
+            btn.innerText = 'Exit Game';
+            btn.onclick = confirmExitGame;
+            btn.className =
+                'bg-rose-600/85 hover:bg-rose-600 text-white px-2.5 py-1 rounded-lg font-semibold transition text-[11px] border border-rose-700/50';
+            btn.title = 'Exit the current game or room';
+        }
+    }
+
+    function setLobbyDefaultSettings() {
+        const playersSelect = document.getElementById('max-players-select');
+        const cardsSelect = document.getElementById('cards-count-select');
+        const pointsSelect = document.getElementById('target-points-select');
+
+        if (playersSelect) playersSelect.value = '4';
+        if (cardsSelect) cardsSelect.value = '5';
+        if (pointsSelect) pointsSelect.value = '50';
+    }
+
+    function refreshLobbyApp() {
+        // Always reset the lobby choices before reloading so the next
+        // visit starts with the requested defaults.
+        setLobbyDefaultSettings();
+
+        try {
+            sessionStorage.setItem(
+                'leastCountResetLobbyDefaults',
+                '1'
+            );
+        } catch (e) {}
+
+        window.location.reload();
+    }
+
+    // On every fresh app load, the lobby starts with:
+    // 4 players, 5 cards, 50 elimination points.
+    try {
+        if (
+            document.getElementById('lobby-screen') &&
+            !document.getElementById('lobby-screen').classList.contains('hidden')
+        ) {
+            setLobbyDefaultSettings();
+            setHeaderAction(true);
+        }
+    } catch (e) {}
+
+    // ============================================================
     // EXIT GAME
     // ============================================================
 
@@ -1703,6 +2349,8 @@
         } catch (e) {}
         roomChannel = null;
         try { localStorage.removeItem('leastCountGameSession'); } catch (e) {}
+        updateGameOnlyFooterControls(false);
+
         isHost = false;
         isSoloMode = false;
         myId = '';
@@ -1718,6 +2366,8 @@
         turnPhase = 'drop';
         pendingRejoinRequest = null;
         document.getElementById('lobby-screen').classList.remove('hidden');
+        setLobbyDefaultSettings();
+        setHeaderAction(true);
         document.getElementById('waiting-screen').classList.add('hidden');
         document.getElementById('game-board-screen').classList.add('hidden');
         document.getElementById('room-badge').classList.add('hidden');
@@ -1728,7 +2378,7 @@
         document.getElementById('scoreboard-modal').classList.add('hidden');
         document.getElementById('round-over-modal').classList.add('hidden');
         document.getElementById('lobby-error').classList.add('hidden');
-      
+        logTicker('Ready');
         refreshPublicRoomsList();
     }
 
@@ -1953,10 +2603,10 @@
 
     function startSoloGame() {
 
+        if (!currentUser) { showAuthScreen(true); return; }
+
         myName =
-            document.getElementById(
-                'nickname-input'
-            ).value.trim() ||
+            String(currentProfile?.first_name || '').trim() ||
             "Player";
 
         cardsPerPlayer =
@@ -1973,6 +2623,8 @@
                 ).value
             );
 
+        includeJoker = document.getElementById('joker-option-select').value === 'yes';
+
         maxPlayersLimit =
             parseInt(
                 document.getElementById(
@@ -1984,11 +2636,22 @@
         isHost = true;
 
         myId = 'player-me';
-        roomCode = 'SOLO';
+
+        // Give every Computer game a unique code so each solo game gets
+        // its own Supabase history row instead of overwriting an older one.
+        roomCode =
+            'SOLO-' +
+            Date.now().toString(36).toUpperCase() +
+            '-' +
+            Math.random().toString(36).slice(2, 6).toUpperCase();
+
+        setWalletGameId();
+
         gameHistoryHostName = myName;
 
         gameHistory = [];
         roundCounter = 0;
+        resetTournamentWinnerState(roomCode);
 
         players = [
             {
@@ -2025,6 +2688,11 @@
             });
         }
 
+        // Lock the payout multiplier to the number of opponents
+        // at the beginning of this game. Eliminations later do not
+        // change the win reward.
+        gameOpponentCount = Math.max(1, players.length - 1);
+
         myIndex = 0;
 
         let fullDeck =
@@ -2057,6 +2725,8 @@
             'lobby-screen'
         ).classList.add('hidden');
 
+        setHeaderAction(false);
+
         document.getElementById(
             'game-board-screen'
         ).classList.remove('hidden');
@@ -2080,6 +2750,10 @@
 
         renderGameBoard();
 
+        // Solo/Computer games use the same Supabase game-history table.
+        // isHost=true in solo mode, so this creates the history row too.
+        syncGameHistoryToSupabase('');
+
         logTicker(
             "Solo game started against Computer bots!"
         );
@@ -2093,19 +2767,15 @@
 
     function createRoom() {
 
+        if (!currentUser) { showAuthScreen(true); return; }
+
         isSoloMode = false;
 
         myName =
-            document.getElementById(
-                'nickname-input'
-            ).value.trim();
+            String(currentProfile?.first_name || '').trim();
 
         if (!myName) {
-
-            showLobbyError(
-                "Please enter your nickname."
-            );
-
+            showLobbyError("Your account profile is missing a first name.");
             return;
         }
 
@@ -2129,6 +2799,8 @@
                     'target-points-select'
                 ).value
             );
+
+        includeJoker = document.getElementById('joker-option-select').value === 'yes';
 
         isHost = true;
         myId = myClientToken;
@@ -2167,6 +2839,8 @@
         document.getElementById(
             'lobby-screen'
         ).classList.add('hidden');
+
+        setHeaderAction(false);
 
         document.getElementById(
             'waiting-screen'
@@ -2218,12 +2892,12 @@
 
     function joinRoom() {
 
+        if (!currentUser) { showAuthScreen(true); return; }
+
         isSoloMode = false;
 
         myName =
-            document.getElementById(
-                'nickname-input'
-            ).value.trim();
+            String(currentProfile?.first_name || '').trim();
 
         let codeInput =
             document.getElementById(
@@ -2320,7 +2994,10 @@
                 cardsPerPlayer,
 
             targetPoints:
-                targetEliminationPoints
+                targetEliminationPoints,
+
+            includeJoker:
+                includeJoker
         });
     }
 
@@ -2347,6 +3024,9 @@
             'display-target-pts'
         ).innerText =
             targetEliminationPoints;
+
+        const jokerDisplay = document.getElementById('display-joker-option');
+        if (jokerDisplay) jokerDisplay.innerText = includeJoker ? 'Yes (0)' : 'No';
 
         const ul =
             document.getElementById(
@@ -2438,6 +3118,43 @@
     const roomChatMessages = [];
     const seenChatMessageIds = new Set();
 
+    function clearRoomChatUI() {
+        const chatBanner = document.getElementById('chat-messages-banner');
+        const historyList = document.getElementById('chat-history-list');
+
+        if (historyList) {
+            historyList.innerHTML = '';
+        }
+
+        if (chatBanner) {
+            chatBanner.classList.add('hidden');
+            chatBanner.classList.remove('flex');
+        }
+    }
+
+    function resetRoomChatState(roomKey = '') {
+        const normalizedRoomKey = String(roomKey || '').trim().toUpperCase();
+
+        // Do not wipe chat when the same room is merely reconnecting.
+        if (activeChatRoomKey === normalizedRoomKey) {
+            return;
+        }
+
+        activeChatRoomKey = normalizedRoomKey;
+        roomChatMessages.length = 0;
+        seenChatMessageIds.clear();
+        clearRoomChatUI();
+    }
+
+    function isChatMessageForCurrentRoom(data) {
+        if (!data || data.type !== 'ROOM_CHAT_MESSAGE') return false;
+
+        const messageRoom = String(data.roomCode || '').trim().toUpperCase();
+        const currentRoom = String(roomCode || '').trim().toUpperCase();
+
+        return !!currentRoom && !!messageRoom && messageRoom === currentRoom;
+    }
+
     function sendRoomChatMessage() {
 
         const inputEl =
@@ -2483,6 +3200,11 @@
 
                 type:
                     'ROOM_CHAT_MESSAGE',
+
+                // Always include the room identity so a message can
+                // never be displayed by another room's chat.
+                roomCode:
+                    roomCode,
 
                 messageId:
                     messageId,
@@ -2855,6 +3577,10 @@
                 'ROOM_CHAT_MESSAGE'
             ) {
 
+                // Ignore chat packets that belong to another room.
+                if (!isChatMessageForCurrentRoom(data))
+                    return;
+
                 if (
                     data.forwardedByHost
                 )
@@ -2996,7 +3722,7 @@
                         "You were removed by host."
                     );
 
-                    location.reload();
+                    returnToLobbyWithoutReload("You were removed by the host.");
                 }
 
                 break;
@@ -3036,9 +3762,8 @@
                             );
                     } catch (e) {}
 
-                    setTimeout(
-                        () => location.reload(),
-                        1200
+                    returnToLobbyWithoutReload(
+                        "The host denied your rejoin request."
                     );
 
                     break;
@@ -3470,6 +4195,8 @@
 
                 targetEliminationPoints =
                     data.targetPoints;
+                includeJoker =
+                    data.includeJoker === true;
 
                 resetJoinButtonState(
                     true
@@ -3480,6 +4207,8 @@
                 ).classList.add(
                     'hidden'
                 );
+
+                setHeaderAction(false);
 
                 document.getElementById(
                     'waiting-screen'
@@ -3510,6 +4239,20 @@
                 players =
                     data.players;
 
+                walletGameId =
+                    data.walletGameId ||
+                    walletGameId ||
+                    roomCode;
+
+                gameOpponentCount =
+                    Math.max(
+                        1,
+                        Math.trunc(
+                            Number(data.gameOpponentCount) ||
+                            Math.max(1, data.players.length - 1)
+                        )
+                    );
+
                 deck =
                     data.deck;
 
@@ -3526,6 +4269,8 @@
                 targetEliminationPoints =
                     data.targetPoints ||
                     targetEliminationPoints;
+                includeJoker =
+                    data.includeJoker === true;
 
                 gameHistory =
                     data.gameHistory ||
@@ -3705,10 +4450,44 @@
 
             case 'ROOM_CHAT_MESSAGE':
 
+                // Guest clients must also reject messages from any
+                // room other than the room they are currently in.
+                if (!isChatMessageForCurrentRoom(data))
+                    break;
+
                 displayChatMessageLocally(
                     data.senderName,
                     data.text,
                     data.messageId
+                );
+
+                break;
+
+            // ----------------------------------------------------
+            // TOURNAMENT WINNER
+            // ----------------------------------------------------
+
+            case 'TOURNAMENT_WINNER':
+
+                if (data.walletGameId)
+                    walletGameId = data.walletGameId;
+
+                if (data.gameOpponentCount !== undefined)
+                    gameOpponentCount =
+                        Math.max(
+                            1,
+                            Math.trunc(Number(data.gameOpponentCount) || 1)
+                        );
+
+                settleWalletForCompletedGame(
+                    data.winnerName,
+                    gameOpponentCount,
+                    isSoloMode ? 'bot' : 'real'
+                );
+
+                showTournamentWinnerPopup(
+                    data.winnerName,
+                    data.roomCode
                 );
 
                 break;
@@ -3719,6 +4498,13 @@
 
             case 'ROUND_OVER':
 
+                if (
+                    String(data.roomCode || '').trim().toUpperCase() !==
+                    String(roomCode || '').trim().toUpperCase()
+                ) {
+                    break;
+                }
+
                 players =
                     data.players ||
                     players;
@@ -3726,6 +4512,16 @@
                 gameHistory =
                     data.gameHistory ||
                     gameHistory;
+
+                if (data.walletGameId)
+                    walletGameId = data.walletGameId;
+
+                if (data.gameOpponentCount !== undefined)
+                    gameOpponentCount =
+                        Math.max(
+                            1,
+                            Math.trunc(Number(data.gameOpponentCount) || 1)
+                        );
 
                 roundActive = false;
 
@@ -3744,6 +4540,19 @@
                 );
 
                 renderGameBoard();
+
+                if (data.tournamentWinner) {
+                    settleWalletForCompletedGame(
+                        data.tournamentWinner,
+                        gameOpponentCount,
+                        isSoloMode ? 'bot' : 'real'
+                    );
+
+                    showTournamentWinnerPopup(
+                        data.tournamentWinner,
+                        data.roomCode
+                    );
+                }
 
                 break;
         }
@@ -3785,6 +4594,15 @@
                             .substring(2)
                 });
             }
+        }
+
+        if (includeJoker) {
+            d.push({
+                suit: '🃏',
+                val: 'JOKER',
+                points: 0,
+                uid: Math.random().toString(36).substring(2)
+            });
         }
 
         for (
@@ -3846,6 +4664,22 @@
         roundCounter = 1;
         gameHistory = [];
 
+        // One unique wallet settlement per online game session.
+        setWalletGameId();
+
+        // Lock the payout multiplier to the number of real players
+        // participating when the room starts. Later eliminations do
+        // not reduce the winner's reward.
+        gameOpponentCount = Math.max(
+            1,
+            players.filter(
+                p =>
+                    p.connected !== false &&
+                    !p.eliminated &&
+                    p.viewOnly !== true
+            ).length - 1
+        );
+
         let fullDeck =
             createDeck();
 
@@ -3905,6 +4739,15 @@
 
             cardsPerPlayer:
                 cardsPerPlayer,
+
+            includeJoker:
+                includeJoker,
+
+            walletGameId:
+                walletGameId,
+
+            gameOpponentCount:
+                gameOpponentCount,
 
             gameHistory:
                 gameHistory
@@ -4323,6 +5166,13 @@
 
         advanceTurn();
 
+        // Render the draw locally immediately. The host will still
+        // validate and broadcast the authoritative state, but the
+        // player should not wait for the realtime round-trip to see
+        // the card they just drew.
+        renderGameBoard();
+        logTicker(`${me.name} drew a card.`);
+
         syncActionComplete(
             `${me.name} drew a card.`
         );
@@ -4582,7 +5432,7 @@
     // SHOW ROUND
     // ============================================================
 
-    function executeShowRound(
+    async function executeShowRound(
         callerPeerId
     ) {
 
@@ -4858,6 +5708,16 @@
                 ? remainingPlayers[0].name
                 : '';
 
+        // Settle the wallet immediately when the game has a final winner.
+        // This works for both solo/bot games and online multiplayer.
+        if (roundWinner) {
+            settleWalletForCompletedGame(
+                roundWinner,
+                gameOpponentCount,
+                isSoloMode ? 'bot' : 'real'
+            );
+        }
+
         // Persist the complete game history after every completed round.
         // Only the host writes, and the same host + game code updates the existing row.
         syncGameHistoryToSupabase(roundWinner);
@@ -4866,6 +5726,9 @@
 
             type:
                 'ROUND_OVER',
+
+            roomCode:
+                roomCode,
 
             resultsData:
                 resultsText,
@@ -4877,7 +5740,18 @@
                 players,
 
             gameHistory:
-                gameHistory
+                gameHistory,
+
+            // If only one eligible player remains, this round also ended
+            // the tournament. Send the winner in the same reliable packet.
+            tournamentWinner:
+                roundWinner || '',
+
+            walletGameId:
+                walletGameId,
+
+            gameOpponentCount:
+                gameOpponentCount
         };
 
         showRoundOverModal(
@@ -4887,12 +5761,23 @@
 
         renderGameBoard();
 
+        if (roundWinner) {
+            // Host/solo gets the popup immediately. Remote clients get it
+            // from the same ROUND_OVER broadcast below.
+            showTournamentWinnerPopup(
+                roundWinner,
+                roomCode
+            );
+        }
+
         if (
             isHost &&
             !isSoloMode
         ) {
 
-            sendRealtimeMessage(
+            // Wait until Supabase accepts the broadcast before this flow can
+            // tear down the room channel.
+            await sendRealtimeMessage(
                 payload
             );
         }
@@ -5000,14 +5885,43 @@
             const finalWinner =
                 activePlayers[0] ? activePlayers[0].name : 'Nobody';
 
+            settleWalletForCompletedGame(
+                finalWinner,
+                gameOpponentCount,
+                isSoloMode ? 'bot' : 'real'
+            );
+
             // Final update writes the winner into the same database row.
             await syncGameHistoryToSupabase(finalWinner);
 
-            alert(
-                `Tournament Over! Winner is ${finalWinner}!`
+            // Fallback if the final ROUND_OVER winner was not displayed.
+            showTournamentWinnerPopup(
+                finalWinner,
+                roomCode
             );
 
-            location.reload();
+            // Await the send so the room channel is not removed before
+            // Supabase accepts the final winner event.
+            await sendRealtimeMessage({
+                type:
+                    'TOURNAMENT_WINNER',
+
+                roomCode:
+                    roomCode,
+
+                winnerName:
+                    finalWinner,
+
+                walletGameId:
+                    walletGameId,
+
+                gameOpponentCount:
+                    gameOpponentCount
+            });
+
+            await returnToLobbyWithoutReload(
+                `Tournament over. Winner: ${finalWinner}.`
+            );
 
             return;
         }
@@ -5093,6 +6007,15 @@
             cardsPerPlayer:
                 cardsPerPlayer,
 
+            includeJoker:
+                includeJoker,
+
+            walletGameId:
+                walletGameId,
+
+            gameOpponentCount:
+                gameOpponentCount,
+
             gameHistory:
                 gameHistory
         };
@@ -5121,7 +6044,17 @@
     // RENDER GAME BOARD
     // ============================================================
 
+    function updateGameOnlyFooterControls(show) {
+        const historyBtn = document.getElementById('history-footer-btn');
+        const scoresBtn = document.getElementById('scores-footer-btn');
+
+        if (historyBtn) historyBtn.classList.toggle('hidden', !show);
+        if (scoresBtn) scoresBtn.classList.toggle('hidden', !show);
+    }
+
     function renderGameBoard() {
+        updateGameOnlyFooterControls(true);
+
 
         const topScoresContainer =
             document.getElementById(
@@ -5718,7 +6651,7 @@
             <div class="flex items-center justify-between gap-3 p-4 border-b border-zinc-800 shrink-0">
                 <div>
                     <h2 class="text-lg font-black text-amber-300">Game History DB</h2>
-                    <p class="text-[11px] text-zinc-500 mt-1">Saved rounds, players, scores and final winners from Supabase.</p>
+                    <p class="text-[11px] text-zinc-500 mt-1">Select a date to view the game history saved in Supabase.</p>
                 </div>
                 <div class="flex items-center gap-2">
                     <button onclick="loadDatabaseGameHistory()"
@@ -5732,7 +6665,20 @@
                 </div>
             </div>
 
-           
+            <div class="px-4 pt-3 shrink-0">
+                <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                    <label for="database-history-date" class="text-xs font-bold text-zinc-400">
+                        Select Date
+                    </label>
+                    <select id="database-history-date"
+                            onchange="renderDatabaseGameHistoryForSelectedDate()"
+                            class="w-full sm:w-auto min-w-[220px] px-3 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-xs font-bold text-white focus:outline-none focus:border-emerald-500">
+                    </select>
+                </div>
+                <div id="database-history-status" class="pt-2 text-xs text-zinc-500">
+                    Ready
+                </div>
+            </div>
 
             <div id="database-history-list" class="p-4 space-y-3 overflow-y-auto flex-1"></div>
         </div>
@@ -5767,11 +6713,173 @@
             }
         }
 
+        let databaseGameHistoryRows = [];
+
+        function getDatabaseHistoryLocalDate(value) {
+            if (!value) return '';
+
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '';
+
+            // Use the browser's local date so the filter matches the user's current date.
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+
+            return `${year}-${month}-${day}`;
+        }
+
+        function getDatabaseHistoryToday() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function formatDatabaseHistoryDate(dateKey) {
+            if (!dateKey) return 'Select Date';
+
+            const parts = dateKey.split('-').map(Number);
+            if (parts.length !== 3 || parts.some(Number.isNaN)) {
+                return dateKey;
+            }
+
+            const date = new Date(parts[0], parts[1] - 1, parts[2]);
+            return date.toLocaleDateString(undefined, {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+        }
+
+        function populateDatabaseHistoryDateDropdown(rows) {
+            const dateSelect = document.getElementById('database-history-date');
+            if (!dateSelect) return;
+
+            const today = getDatabaseHistoryToday();
+            const dateKeys = new Set([today]);
+
+            (Array.isArray(rows) ? rows : []).forEach(row => {
+                const dateKey = getDatabaseHistoryLocalDate(row.created_at);
+                if (dateKey) {
+                    dateKeys.add(dateKey);
+                }
+            });
+
+            const sortedDates = Array.from(dateKeys).sort((a, b) => b.localeCompare(a));
+
+            dateSelect.innerHTML = sortedDates.map(dateKey => `
+                <option value="${escapeDatabaseHistoryHtml(dateKey)}">
+                    ${escapeDatabaseHistoryHtml(formatDatabaseHistoryDate(dateKey))}
+                </option>
+            `).join('');
+
+            // Always open the history on today's date by default.
+            dateSelect.value = today;
+        }
+
+        function renderDatabaseGameHistoryForSelectedDate() {
+            const status = document.getElementById('database-history-status');
+            const list = document.getElementById('database-history-list');
+            const dateSelect = document.getElementById('database-history-date');
+
+            if (!status || !list || !dateSelect) return;
+
+            const selectedDate = dateSelect.value || getDatabaseHistoryToday();
+            const rows = databaseGameHistoryRows.filter(row =>
+                getDatabaseHistoryLocalDate(row.created_at) === selectedDate
+            );
+
+            list.innerHTML = '';
+
+            if (rows.length === 0) {
+                status.innerText = `No games found for ${formatDatabaseHistoryDate(selectedDate)}.`;
+                list.innerHTML = `
+                    <div class="text-center text-xs text-zinc-600 py-12">
+                        No game history is available for the selected date.
+                    </div>`;
+                return;
+            }
+
+            status.innerText =
+                `${rows.length} game${rows.length === 1 ? '' : 's'} on ${formatDatabaseHistoryDate(selectedDate)}.`;
+
+            rows.forEach(row => {
+                const card = document.createElement('article');
+                card.className =
+                    'bg-black border border-zinc-800 rounded-2xl p-4 shadow-xl';
+
+                card.innerHTML = `
+                    <div class="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 pb-3 mb-3">
+                        <div>
+                            <h3 class="text-sm sm:text-base font-black text-emerald-300">
+                                ${escapeDatabaseHistoryHtml(row.game_code)}
+                            </h3>
+                            <p class="text-xs text-zinc-400 mt-1">
+                                Host:
+                                <span class="text-white font-semibold">
+                                    ${escapeDatabaseHistoryHtml(row.game_host)}
+                                </span>
+                            </p>
+                        </div>
+
+                        <div class="text-right text-xs">
+                            <div class="text-zinc-500">Winner</div>
+                            <div class="text-amber-300 font-bold">
+                                ${escapeDatabaseHistoryHtml(row.game_winner || 'In Progress')}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid sm:grid-cols-2 gap-3 mb-3">
+                        <div class="bg-zinc-900 rounded-xl p-3">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">
+                                Players
+                            </div>
+                            <div class="text-xs text-zinc-200 break-words">
+                                ${escapeDatabaseHistoryHtml(row.players_name)}
+                            </div>
+                        </div>
+
+                        <div class="bg-zinc-900 rounded-xl p-3">
+                            <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">
+                                Final / Current Points
+                            </div>
+                            <div class="text-xs text-zinc-200 break-words">
+                                ${escapeDatabaseHistoryHtml(row.game_points)}
+                            </div>
+                        </div>
+                    </div>
+
+                    <details>
+                        <summary class="cursor-pointer text-xs font-bold text-emerald-300">
+                            View complete round history
+                        </summary>
+
+                        <pre class="mt-3 whitespace-pre-wrap break-words bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-[11px] leading-relaxed text-zinc-300">${escapeDatabaseHistoryHtml(row.game_history)}</pre>
+                    </details>
+
+                    <div class="text-[10px] text-zinc-600 mt-3">
+                        Saved:
+                        ${escapeDatabaseHistoryHtml(
+                            row.created_at
+                                ? new Date(row.created_at).toLocaleString()
+                                : ''
+                        )}
+                    </div>
+                `;
+
+                list.appendChild(card);
+            });
+        }
+
         async function loadDatabaseGameHistory() {
             const status = document.getElementById('database-history-status');
             const list = document.getElementById('database-history-list');
+            const dateSelect = document.getElementById('database-history-date');
 
-            if (!status || !list) return;
+            if (!status || !list || !dateSelect) return;
 
             status.innerText = 'Loading game history...';
             list.innerHTML = '';
@@ -5794,88 +6902,13 @@
                 }
 
                 const rows = await response.json();
+                databaseGameHistoryRows = Array.isArray(rows) ? rows : [];
 
-                if (!Array.isArray(rows) || rows.length === 0) {
-                    status.innerText = 'No saved games found.';
-                    list.innerHTML = `
-                        <div class="text-center text-xs text-zinc-600 py-12">
-                            No game history has been saved yet.
-                        </div>`;
-                    return;
-                }
-
-                status.innerText =
-                    `${rows.length} saved game${rows.length === 1 ? '' : 's'}.`;
-
-                rows.forEach(row => {
-                    const card = document.createElement('article');
-                    card.className =
-                        'bg-black border border-zinc-800 rounded-2xl p-4 shadow-xl';
-
-                    card.innerHTML = `
-                        <div class="flex flex-wrap items-start justify-between gap-3 border-b border-zinc-800 pb-3 mb-3">
-                            <div>
-                                <h3 class="text-sm sm:text-base font-black text-emerald-300">
-                                    ${escapeDatabaseHistoryHtml(row.game_code)}
-                                </h3>
-                                <p class="text-xs text-zinc-400 mt-1">
-                                    Host:
-                                    <span class="text-white font-semibold">
-                                        ${escapeDatabaseHistoryHtml(row.game_host)}
-                                    </span>
-                                </p>
-                            </div>
-
-                            <div class="text-right text-xs">
-                                <div class="text-zinc-500">Winner</div>
-                                <div class="text-amber-300 font-bold">
-                                    ${escapeDatabaseHistoryHtml(row.game_winner || 'In Progress')}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="grid sm:grid-cols-2 gap-3 mb-3">
-                            <div class="bg-zinc-900 rounded-xl p-3">
-                                <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">
-                                    Players
-                                </div>
-                                <div class="text-xs text-zinc-200 break-words">
-                                    ${escapeDatabaseHistoryHtml(row.players_name)}
-                                </div>
-                            </div>
-
-                            <div class="bg-zinc-900 rounded-xl p-3">
-                                <div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1">
-                                    Final / Current Points
-                                </div>
-                                <div class="text-xs text-zinc-200 break-words">
-                                    ${escapeDatabaseHistoryHtml(row.game_points)}
-                                </div>
-                            </div>
-                        </div>
-
-                        <details>
-                            <summary class="cursor-pointer text-xs font-bold text-emerald-300">
-                                View complete round history
-                            </summary>
-
-                            <pre class="mt-3 whitespace-pre-wrap break-words bg-zinc-950 border border-zinc-800 rounded-xl p-3 text-[11px] leading-relaxed text-zinc-300">${escapeDatabaseHistoryHtml(row.game_history)}</pre>
-                        </details>
-
-                        <div class="text-[10px] text-zinc-600 mt-3">
-                            Saved:
-                            ${escapeDatabaseHistoryHtml(
-                                row.created_at
-                                    ? new Date(row.created_at).toLocaleString()
-                                    : ''
-                            )}
-                        </div>
-                    `;
-
-                    list.appendChild(card);
-                });
+                populateDatabaseHistoryDateDropdown(databaseGameHistoryRows);
+                renderDatabaseGameHistoryForSelectedDate();
             } catch (error) {
                 console.error('Unable to load database game history:', error);
+                databaseGameHistoryRows = [];
                 status.innerText =
                     'Unable to load game history from Supabase.';
                 list.innerHTML = `
